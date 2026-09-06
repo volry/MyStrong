@@ -7,17 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signOut, updateProfile } from "../actions";
 import { PushToggle } from "./push-toggle";
+import { ExportSection } from "./export-section";
 
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; export?: string }>;
 }) {
   const profile = await getProfile();
   if (!profile) redirect("/login");
   const locale = await getRequestLocale(profile.locale);
   const t = makeT(locale);
-  const { saved, error } = await searchParams;
+  const { saved, error, export: exportFlag } = await searchParams;
 
   const selectClass =
     "h-12 w-full rounded-lg border border-input bg-background px-3 text-base";
@@ -72,6 +73,8 @@ export default async function SettingsPage({
       {process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && (
         <PushToggle locale={locale} publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
       )}
+
+      <ExportSection t={t} renewed={exportFlag === "new"} />
 
       <form action={signOut}>
         <Button type="submit" variant="outline" className="h-12 w-full text-base">

@@ -131,3 +131,7 @@ Web Push with VAPID (`web-push` on the server). Table `push_subscriptions` (own 
 Triggers: client finishes a workout → every coach gets "{name} finished a workout" with day + comment preview, opens the workout. Coach activates a program → that client gets "New program: {name}", opens Today.
 
 Env (Vercel, all environments): `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (sensitive), `VAPID_SUBJECT`. For local dev add the same to `.env.local` (`vercel env pull`).
+
+## Export to Google Sheets (2026-09-06)
+
+Settings → Export: "Download CSV" and a live link for Google Sheets (`=IMPORTDATA("https://mystrong.vercel.app/api/export/sets.csv?token=…")`). One row per set. Per-user secret in `export_tokens` (auto-created on first Settings visit; "Make a new link" rotates it). `public.export_sets(p_token)` is SECURITY DEFINER callable by anon on purpose (Sheets has no session); it returns nothing for unknown tokens; coach token = all clients, client token = own. Route: `src/app/api/export/sets.csv/route.ts` (anon supabase-js client → RPC → CSV with BOM). `/api/export` is public in the proxy. No Google OAuth integration (would need a Google Cloud project).

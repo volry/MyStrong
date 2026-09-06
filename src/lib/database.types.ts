@@ -39,6 +39,32 @@ export type Database = {
           },
         ]
       }
+      export_tokens: {
+        Row: {
+          created_at: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "export_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercises: {
         Row: {
           created_at: string
@@ -406,7 +432,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      export_sets: {
+        Args: { p_token: string }
+        Returns: {
+          performed_at: string
+          client_name: string | null
+          client_email: string
+          program: string
+          week_no: number
+          day_no: number
+          day_title: string | null
+          exercise: string
+          set_no: number
+          weight_kg: number | null
+          reps: number | null
+          time_sec: number | null
+          rpe: number | null
+          workout_comment: string | null
+          workout_id: string
+        }[]
+      }
     }
     Enums: {
       user_role: "coach" | "client"
