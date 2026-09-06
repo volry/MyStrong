@@ -49,30 +49,31 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* Teal-green theme matching the app icon. Light mode only (no dark toggle in the app). */
+  --background: oklch(0.985 0.007 165);
+  --foreground: oklch(0.2 0.02 185);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.2 0.02 185);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.2 0.02 185);
+  --primary: oklch(0.56 0.115 178);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.94 0.035 175);
+  --secondary-foreground: oklch(0.34 0.075 180);
+  --muted: oklch(0.955 0.012 165);
+  --muted-foreground: oklch(0.5 0.025 185);
+  --accent: oklch(0.94 0.035 175);
+  --accent-foreground: oklch(0.34 0.075 180);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --border: oklch(0.9 0.018 170);
+  --input: oklch(0.88 0.02 170);
+  --ring: oklch(0.56 0.115 178);
+  --chart-1: oklch(0.56 0.115 178);
+  --chart-2: oklch(0.7 0.09 178);
+  --chart-3: oklch(0.45 0.09 180);
+  --chart-4: oklch(0.82 0.06 175);
+  --chart-5: oklch(0.34 0.075 180);
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -135,4 +136,22 @@ html {
 body {
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Cards float slightly instead of sitting flat on the page. */
+[data-slot="card"] {
+  box-shadow:
+    0 1px 2px oklch(0.34 0.075 180 / 6%),
+    0 4px 12px oklch(0.34 0.075 180 / 5%);
+}
+
+/* Lists rendered as bordered boxes get the same white surface as cards. */
+ul.rounded-xl.border,
+ol.rounded-xl.border {
+  background: var(--card);
+}
+
+/* Page headings in the brand colour. */
+h1 {
+  color: oklch(0.34 0.075 180);
 }
