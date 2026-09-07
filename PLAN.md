@@ -135,3 +135,9 @@ Env (Vercel, all environments): `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_K
 ## Export to Google Sheets (2026-09-06)
 
 Settings → Export: "Download CSV" and a live link for Google Sheets (`=IMPORTDATA("https://mystrong.vercel.app/api/export/sets.csv?token=…")`). One row per set. Per-user secret in `export_tokens` (auto-created on first Settings visit; "Make a new link" rotates it). `public.export_sets(p_token)` is SECURITY DEFINER callable by anon on purpose (Sheets has no session); it returns nothing for unknown tokens; coach token = all clients, client token = own. Route: `src/app/api/export/sets.csv/route.ts` (anon supabase-js client → RPC → CSV with BOM). `/api/export` is public in the proxy. No Google OAuth integration (would need a Google Cloud project).
+
+## Feedback round 1 (2026-09-07)
+
+- Per-exercise client note in the workout (`workout_exercise_notes`), collapsed behind a small "Note for coach" toggle; shown in history detail and CSV export (`exercise_note`).
+- "Last" column in the set grid shows what was done last time (weight×reps or seconds).
+- Speed: Supabase project is in AWS eu-central-1 (Frankfurt); Vercel functions ran in iad1. `vercel.json` pins functions to `fra1`. Added `(app)/loading.tsx` skeleton so tab taps respond instantly; `getActiveProgram` now one round trip.
