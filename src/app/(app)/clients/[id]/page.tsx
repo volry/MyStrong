@@ -101,6 +101,8 @@ export default async function ClientPage({
       </form>
       )}
 
+      <div className="space-y-6 md:grid md:grid-cols-2 md:items-start md:gap-8 md:space-y-0">
+      <div className="space-y-6">
       <section className="space-y-2">
         <h2 className="text-lg font-medium">{t("client.programs")}</h2>
         {!programs || programs.length === 0 ? (
@@ -157,7 +159,9 @@ export default async function ClientPage({
           </form>
         </CardContent>
       </Card>
+      </div>
 
+      <div>
       {workouts && workouts.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-lg font-medium">{t("coach.recentWorkouts")}</h2>
@@ -190,6 +194,8 @@ export default async function ClientPage({
           </ul>
         </section>
       )}
+      </div>
+      </div>
     </div>
   );
 }

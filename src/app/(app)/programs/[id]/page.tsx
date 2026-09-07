@@ -80,6 +80,7 @@ export default async function ProgramPage({
         <p className="text-sm text-muted-foreground">{t("prog.forClient", { name: clientName })}</p>
       </div>
 
+      <div className="md:grid md:grid-cols-[1fr_380px] md:items-start md:gap-8">
       {/* Days by week */}
       <section className="space-y-4">
         {weeks.size === 0 && <p className="text-muted-foreground">{t("prog.noDays")}</p>}
@@ -156,7 +157,7 @@ export default async function ProgramPage({
       </section>
 
       {/* Program settings */}
-      <section className="space-y-4 border-t pt-6">
+      <section className="mt-6 space-y-4 border-t pt-6 md:mt-0 md:border-t-0 md:pt-0">
         <form action={updateProgram} className="space-y-3">
           <input type="hidden" name="id" value={program.id} />
           <div className="space-y-2">
@@ -247,6 +248,7 @@ export default async function ProgramPage({
           </ConfirmButton>
         </form>
       </section>
+      </div>
     </div>
   );
 }

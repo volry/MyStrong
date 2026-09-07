@@ -141,3 +141,7 @@ Settings → Export: "Download CSV" and a live link for Google Sheets (`=IMPORTD
 - Per-exercise client note in the workout (`workout_exercise_notes`), collapsed behind a small "Note for coach" toggle; shown in history detail and CSV export (`exercise_note`).
 - "Last" column in the set grid shows what was done last time (weight×reps or seconds).
 - Speed: Supabase project is in AWS eu-central-1 (Frankfurt); Vercel functions ran in iad1. `vercel.json` pins functions to `fra1`. Added `(app)/loading.tsx` skeleton so tab taps respond instantly; `getActiveProgram` now one round trip.
+
+## Desktop view for the coach (2026-09-07)
+
+md+ breakpoint: left sidebar (`side-nav.tsx`) replaces the bottom tab bar; coach pages widen to max-w-6xl (client pages max-w-2xl). Clients page and client detail are two columns. Program editor: days left, settings right. Day editor: table of exercises with inline target inputs (each row is its own form via the `form` attribute; up/down/remove use `formAction`), plus a sticky searchable library panel (`library-picker.tsx`) with one-click add. Mobile markup unchanged (`md:hidden` / `hidden md:block`).

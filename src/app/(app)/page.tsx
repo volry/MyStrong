@@ -66,6 +66,8 @@ async function CoachHome({ t, locale, params }: { t: T; locale: Locale; params: 
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">{t("coach.clients")}</h1>
 
+      <div className="space-y-6 md:grid md:grid-cols-[1fr_360px] md:items-start md:gap-8 md:space-y-0">
+      <div className="space-y-6">
       {clients && clients.length > 0 ? (
         <ul className="divide-y rounded-xl border">
           {clients.map((c) => {
@@ -93,7 +95,9 @@ async function CoachHome({ t, locale, params }: { t: T; locale: Locale; params: 
       ) : (
         <p className="text-muted-foreground">{t("coach.noClients")}</p>
       )}
+      </div>
 
+      <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>{t("coach.invite")}</CardTitle>
@@ -142,6 +146,8 @@ async function CoachHome({ t, locale, params }: { t: T; locale: Locale; params: 
           </ul>
         </section>
       )}
+      </div>
+      </div>
     </div>
   );
 }
