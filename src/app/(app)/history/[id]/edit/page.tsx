@@ -24,7 +24,7 @@ export default async function EditWorkoutPage({ params }: { params: Promise<{ id
   const { data: w } = await supabase
     .from("workouts")
     .select(
-      "id, performed_at, client_comment, client_id, program_day_id, program_day:program_days(week_no, day_no, title), set_logs(program_exercise_id, set_no, reps, weight, time_sec)",
+      "id, performed_at, client_comment, client_id, program_day_id, program_day:program_days(week_no, day_no, title), set_logs(program_exercise_id, set_no, reps, weight, time_sec), workout_exercise_notes(program_exercise_id, note)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -87,6 +87,7 @@ export default async function EditWorkoutPage({ params }: { params: Promise<{ id
         initialRows={rowsFromSets(workoutItems, saved, profile.unit)}
         initialComment={w.client_comment ?? ""}
         initialDate={w.performed_at}
+        initialNotes={Object.fromEntries(w.workout_exercise_notes.map((n) => [n.program_exercise_id, n.note]))}
       />
     </div>
   );

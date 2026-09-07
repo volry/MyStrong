@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft, Pencil } from "lucide-react";
+import { ChevronLeft, MessageSquare, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -31,7 +31,7 @@ export default async function WorkoutDetailPage({
   const { data: w } = await supabase
     .from("workouts")
     .select(
-      "id, performed_at, status, client_comment, client_id, client:profiles!client_id(full_name, email), program_day:program_days(week_no, day_no, title, program:programs(name)), set_logs(set_no, reps, weight, time_sec, program_exercise:program_exercises(id, position, exercise:exercises(name)))",
+      "id, performed_at, status, client_comment, client_id, client:profiles!client_id(full_name, email), program_day:program_days(week_no, day_no, title, program:programs(name)), set_logs(set_no, reps, weight, time_sec, program_exercise:program_exercises(id, position, exercise:exercises(name))), workout_exercise_notes(program_exercise_id, note)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -39,12 +39,14 @@ export default async function WorkoutDetailPage({
 
   // group sets by exercise, in program order
   type SetRow = (typeof w.set_logs)[number];
-  const groups = new Map<string, { name: string; position: number; sets: SetRow[] }>();
+  const noteByExercise = new Map(w.workout_exercise_notes.map((n) => [n.program_exercise_id, n.note]));
+  const groups = new Map<string, { name: string; position: number; note?: string; sets: SetRow[] }>();
   for (const s of w.set_logs) {
     const key = s.program_exercise?.id ?? "?";
     const g = groups.get(key) ?? {
       name: s.program_exercise?.exercise?.name ?? "?",
       position: s.program_exercise?.position ?? 0,
+      note: noteByExercise.get(key),
       sets: [],
     };
     g.sets.push(s);
@@ -96,6 +98,12 @@ export default async function WorkoutDetailPage({
         <Card key={g.name + g.position}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{g.name}</CardTitle>
+            {g.note && (
+              <p className="flex items-start gap-1 text-sm text-primary">
+                <MessageSquare className="mt-0.5 size-3.5 shrink-0" />
+                {g.note}
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             <ul className="space-y-1 text-sm tabular-nums">

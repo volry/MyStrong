@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     "reps",
     "seconds",
     "rpe",
+    "exercise_note",
     "comment",
     "workout_id",
   ];
@@ -58,6 +59,7 @@ export async function GET(request: NextRequest) {
         r.reps ?? "",
         r.time_sec ?? "",
         r.rpe ?? "",
+        r.exercise_note ?? "",
         r.workout_comment ?? "",
         r.workout_id,
       ]

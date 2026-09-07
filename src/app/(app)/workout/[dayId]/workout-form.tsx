@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Check, Plus } from "lucide-react";
+import { Check, MessageSquare, Plus } from "lucide-react";
 import { makeT, type Locale, type TranslationKey } from "@/i18n/dictionaries";
 import { formatTarget } from "@/lib/format";
 import { formatWeight, unitToKg, type Unit } from "@/lib/units";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
-import { finishWorkout, skipDay, updateWorkout, type SetInput } from "../actions";
+import { finishWorkout, skipDay, updateWorkout, type NoteInput, type SetInput } from "../actions";
 
 export type PrevSet = {
   set_no: number;
@@ -33,7 +33,7 @@ export type WorkoutItem = {
 };
 
 export type Row = { weight: string; reps: string; time: string; done: boolean };
-type Draft = { rows: Record<string, Row[]>; comment: string };
+type Draft = { rows: Record<string, Row[]>; comment: string; notes?: Record<string, string> };
 
 function usesTime(item: WorkoutItem) {
   return item.target_time_sec != null && item.target_reps == null;
@@ -110,6 +110,14 @@ function withDate(originalIso: string, dateStr: string): string {
   return d.toISOString();
 }
 
+function prevLabel(p: PrevSet | undefined, timeMode: boolean, unit: Unit): string {
+  if (!p) return "—";
+  const w = p.weight != null ? formatWeight(p.weight, unit) : null;
+  const r = timeMode ? (p.time_sec != null ? `${p.time_sec}s` : null) : p.reps != null ? String(p.reps) : null;
+  if (w && r) return `${w}×${r}`;
+  return w ?? r ?? "—";
+}
+
 type Props = {
   locale: Locale;
   unit: Unit;
@@ -125,6 +133,7 @@ type Props = {
       initialRows: Record<string, Row[]>;
       initialComment: string;
       initialDate: string;
+      initialNotes: Record<string, string>;
     }
 );
 
@@ -137,6 +146,14 @@ export function WorkoutForm(props: Props) {
     props.mode === "edit" ? props.initialRows : buildRows(items, previous, unit),
   );
   const [comment, setComment] = useState(props.mode === "edit" ? props.initialComment : "");
+  const [notes, setNotes] = useState<Record<string, string>>(() =>
+    props.mode === "edit" ? props.initialNotes : {},
+  );
+  const [noteOpen, setNoteOpen] = useState<Record<string, boolean>>(() => {
+    const open: Record<string, boolean> = {};
+    if (props.mode === "edit") for (const id of Object.keys(props.initialNotes)) open[id] = true;
+    return open;
+  });
   const [date, setDate] = useState("");
   const [error, setError] = useState<TranslationKey | null>(null);
   const [pending, startTransition] = useTransition();
@@ -161,6 +178,10 @@ export function WorkoutForm(props: Props) {
               return merged;
             });
             setComment(draft.comment ?? "");
+            if (draft.notes) {
+              setNotes(draft.notes);
+              setNoteOpen(Object.fromEntries(Object.keys(draft.notes).map((id) => [id, true])));
+            }
           }
         } catch {
           // ignore corrupt drafts
@@ -175,11 +196,11 @@ export function WorkoutForm(props: Props) {
   useEffect(() => {
     if (!hydrated || isEdit) return;
     try {
-      localStorage.setItem(draftKey, JSON.stringify({ rows, comment } satisfies Draft));
+      localStorage.setItem(draftKey, JSON.stringify({ rows, comment, notes } satisfies Draft));
     } catch {
       // storage unavailable
     }
-  }, [rows, comment, hydrated, isEdit, draftKey]);
+  }, [rows, comment, notes, hydrated, isEdit, draftKey]);
 
   function updateRow(itemId: string, index: number, patch: Partial<Row>) {
     setRows((r) => ({
@@ -218,6 +239,12 @@ export function WorkoutForm(props: Props) {
     return sets;
   }
 
+  function collectNotes(): NoteInput[] {
+    return Object.entries(notes)
+      .filter(([, note]) => note.trim().length > 0)
+      .map(([program_exercise_id, note]) => ({ program_exercise_id, note: note.trim() }));
+  }
+
   function submit() {
     setError(null);
     const sets = collectSets();
@@ -225,6 +252,7 @@ export function WorkoutForm(props: Props) {
       setError("workout.noSets");
       return;
     }
+    const noteList = collectNotes();
     startTransition(async () => {
       const result =
         props.mode === "edit"
@@ -233,8 +261,9 @@ export function WorkoutForm(props: Props) {
               comment,
               performedAt: date ? withDate(props.initialDate, date) : props.initialDate,
               sets,
+              notes: noteList,
             })
-          : await finishWorkout({ dayId, comment, sets });
+          : await finishWorkout({ dayId, comment, sets, notes: noteList });
       if (result?.error) {
         setError(result.error);
         return;
@@ -251,6 +280,9 @@ export function WorkoutForm(props: Props) {
 
   const inputClass =
     "h-11 w-full rounded-lg border border-input bg-background px-1 text-center text-base tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const gridCols = isEdit
+    ? "grid-cols-[2rem_1fr_1fr_2.75rem]"
+    : "grid-cols-[2rem_3.75rem_1fr_1fr_2.75rem]";
 
   return (
     <div className="space-y-4">
@@ -276,6 +308,8 @@ export function WorkoutForm(props: Props) {
       {items.map((item, idx) => {
         const timeMode = usesTime(item);
         const prev = !isEdit && item.exercise ? previous[item.exercise.id] : undefined;
+        const open = noteOpen[item.id] ?? false;
+        const note = notes[item.id] ?? "";
         return (
           <Card key={item.id}>
             <CardHeader className="pb-2">
@@ -294,65 +328,60 @@ export function WorkoutForm(props: Props) {
               />
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="grid grid-cols-[2.5rem_1fr_1fr_2.75rem] items-center gap-2 text-xs text-muted-foreground">
+              <div className={cn("grid items-center gap-2 text-xs text-muted-foreground", gridCols)}>
                 <span>{t("workout.set")}</span>
+                {!isEdit && <span className="text-center">{t("workout.prev")}</span>}
                 <span className="text-center">
                   {t("workout.weight")} ({unit})
                 </span>
                 <span className="text-center">{timeMode ? t("workout.time") : t("workout.reps")}</span>
                 <span />
               </div>
-              {rows[item.id].map((row, i) => {
-                const p = prev?.[i];
-                return (
-                  <div key={i} className="grid grid-cols-[2.5rem_1fr_1fr_2.75rem] items-center gap-2">
-                    <div className="text-center">
-                      <div className="font-medium">{i + 1}</div>
-                      {p && (
-                        <div className="text-[10px] leading-tight text-muted-foreground">
-                          {p.weight != null ? formatWeight(p.weight, unit) : "–"}×
-                          {timeMode ? (p.time_sec ?? "–") : (p.reps ?? "–")}
-                        </div>
-                      )}
+              {rows[item.id].map((row, i) => (
+                <div key={i} className={cn("grid items-center gap-2", gridCols)}>
+                  <div className="text-center font-medium">{i + 1}</div>
+                  {!isEdit && (
+                    <div className="truncate text-center text-xs tabular-nums text-muted-foreground">
+                      {prevLabel(prev?.[i], timeMode, unit)}
                     </div>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      step="0.5"
-                      min={0}
-                      value={row.weight}
-                      onChange={(e) => updateRow(item.id, i, { weight: e.target.value })}
-                      className={cn(inputClass, row.done && "bg-primary/10")}
-                      aria-label={`${t("workout.set")} ${i + 1} ${t("workout.weight")}`}
-                    />
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      value={timeMode ? row.time : row.reps}
-                      onChange={(e) =>
-                        updateRow(item.id, i, timeMode ? { time: e.target.value } : { reps: e.target.value })
-                      }
-                      className={cn(inputClass, row.done && "bg-primary/10")}
-                      aria-label={`${t("workout.set")} ${i + 1} ${timeMode ? t("workout.time") : t("workout.reps")}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => updateRow(item.id, i, { done: !row.done })}
-                      aria-pressed={row.done}
-                      className={cn(
-                        "flex h-11 w-11 items-center justify-center rounded-lg border transition-colors",
-                        row.done
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-input text-muted-foreground",
-                      )}
-                    >
-                      <Check className="size-5" strokeWidth={3} />
-                    </button>
-                  </div>
-                );
-              })}
-              <div className="flex justify-between pt-1">
+                  )}
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.5"
+                    min={0}
+                    value={row.weight}
+                    onChange={(e) => updateRow(item.id, i, { weight: e.target.value })}
+                    className={cn(inputClass, row.done && "bg-primary/10")}
+                    aria-label={`${t("workout.set")} ${i + 1} ${t("workout.weight")}`}
+                  />
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={timeMode ? row.time : row.reps}
+                    onChange={(e) =>
+                      updateRow(item.id, i, timeMode ? { time: e.target.value } : { reps: e.target.value })
+                    }
+                    className={cn(inputClass, row.done && "bg-primary/10")}
+                    aria-label={`${t("workout.set")} ${i + 1} ${timeMode ? t("workout.time") : t("workout.reps")}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updateRow(item.id, i, { done: !row.done })}
+                    aria-pressed={row.done}
+                    className={cn(
+                      "flex h-11 w-11 items-center justify-center rounded-lg border transition-colors",
+                      row.done
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input text-muted-foreground",
+                    )}
+                  >
+                    <Check className="size-5" strokeWidth={3} />
+                  </button>
+                </div>
+              ))}
+              <div className="flex items-center justify-between pt-1">
                 <button
                   type="button"
                   onClick={() => addRow(item.id)}
@@ -361,6 +390,20 @@ export function WorkoutForm(props: Props) {
                   <Plus className="size-4" />
                   {t("workout.addSet")}
                 </button>
+                {canLog && (
+                  <button
+                    type="button"
+                    onClick={() => setNoteOpen((o) => ({ ...o, [item.id]: !open }))}
+                    aria-expanded={open}
+                    className={cn(
+                      "inline-flex items-center gap-1 text-sm",
+                      note ? "text-primary" : "text-muted-foreground",
+                    )}
+                  >
+                    <MessageSquare className="size-4" />
+                    {note && !open ? note.slice(0, 24) + (note.length > 24 ? "…" : "") : t("workout.note")}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => markAll(item.id)}
@@ -369,6 +412,17 @@ export function WorkoutForm(props: Props) {
                   {t("workout.markAll")}
                 </button>
               </div>
+              {canLog && open && (
+                <Input
+                  value={note}
+                  maxLength={500}
+                  autoFocus={!note}
+                  placeholder={t("workout.notePlaceholder")}
+                  onChange={(e) => setNotes((n) => ({ ...n, [item.id]: e.target.value }))}
+                  className="h-10 text-sm"
+                  aria-label={t("workout.note")}
+                />
+              )}
             </CardContent>
           </Card>
         );

@@ -16,11 +16,20 @@ export type SetInput = {
   time_sec: number | null;
 };
 
+export type NoteInput = { program_exercise_id: string; note: string };
+
 export type FinishInput = {
   dayId: string;
   comment: string;
   sets: SetInput[];
+  notes?: NoteInput[];
 };
+
+function cleanNotes(notes: NoteInput[] | undefined) {
+  return (notes ?? [])
+    .map((n) => ({ program_exercise_id: String(n.program_exercise_id), note: String(n.note ?? "").trim().slice(0, 500) }))
+    .filter((n) => n.note.length > 0);
+}
 
 function cleanInt(v: unknown, max: number): number | null {
   if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return null;
@@ -73,6 +82,13 @@ export async function finishWorkout(input: FinishInput): Promise<{ error: Transl
     return { error: "common.error" };
   }
 
+  const notes = cleanNotes(input.notes);
+  if (notes.length > 0) {
+    await supabase
+      .from("workout_exercise_notes")
+      .insert(notes.map((n) => ({ ...n, workout_id: workout.id })));
+  }
+
   // Tell the coach (unless the coach logged their own workout).
   const { data: day } = await supabase
     .from("program_days")
@@ -97,6 +113,7 @@ export type UpdateInput = {
   comment: string;
   performedAt: string;
   sets: SetInput[];
+  notes?: NoteInput[];
 };
 
 /** Replace a logged workout's sets, comment, and date. RLS limits this to the owner. */
@@ -138,6 +155,14 @@ export async function updateWorkout(input: UpdateInput): Promise<{ error: Transl
     .from("set_logs")
     .insert(sets.map((s) => ({ ...s, workout_id: workout.id })));
   if (insError) return { error: "common.error" };
+
+  await supabase.from("workout_exercise_notes").delete().eq("workout_id", workout.id);
+  const notes = cleanNotes(input.notes);
+  if (notes.length > 0) {
+    await supabase
+      .from("workout_exercise_notes")
+      .insert(notes.map((n) => ({ ...n, workout_id: workout.id })));
+  }
 
   revalidateClientPages();
   revalidatePath(`/history/${workout.id}`);

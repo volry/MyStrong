@@ -382,6 +382,39 @@ export type Database = {
           },
         ]
       }
+      workout_exercise_notes: {
+        Row: {
+          note: string
+          program_exercise_id: string
+          workout_id: string
+        }
+        Insert: {
+          note: string
+          program_exercise_id: string
+          workout_id: string
+        }
+        Update: {
+          note?: string
+          program_exercise_id?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_exercise_notes_program_exercise_id_fkey"
+            columns: ["program_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "program_exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_exercise_notes_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workouts: {
         Row: {
           client_comment: string | null
@@ -448,6 +481,7 @@ export type Database = {
           reps: number | null
           time_sec: number | null
           rpe: number | null
+          exercise_note: string | null
           workout_comment: string | null
           workout_id: string
         }[]
