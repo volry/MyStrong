@@ -54,6 +54,7 @@ export default async function WorkoutDetailPage({
   }
   const ordered = [...groups.values()].sort((a, b) => a.position - b.position);
   const isOwner = w.client_id === profile.id;
+  const canEdit = isOwner || profile.role === "coach";
   const backHref = isOwner ? "/history" : `/clients/${w.client_id}`;
 
   return (
@@ -78,7 +79,7 @@ export default async function WorkoutDetailPage({
 
       {saved && <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">{t("history.updated")}</p>}
 
-      {isOwner && w.status === "done" && (
+      {canEdit && w.status === "done" && (
         <Button render={<Link href={`/history/${w.id}/edit`} />} variant="outline" className="h-11 w-full">
           <Pencil className="size-4" />
           {t("history.edit")}
@@ -124,7 +125,7 @@ export default async function WorkoutDetailPage({
         </Card>
       ))}
 
-      {isOwner && (
+      {canEdit && (
         <form action={deleteWorkout} className="border-t pt-4">
           <input type="hidden" name="id" value={w.id} />
           <ConfirmButton

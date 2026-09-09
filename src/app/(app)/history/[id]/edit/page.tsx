@@ -28,7 +28,7 @@ export default async function EditWorkoutPage({ params }: { params: Promise<{ id
     )
     .eq("id", id)
     .maybeSingle();
-  if (!w || w.client_id !== profile.id) notFound();
+  if (!w || (w.client_id !== profile.id && profile.role !== "coach")) notFound();
 
   const { data: items } = await supabase
     .from("program_exercises")

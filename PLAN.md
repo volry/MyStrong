@@ -145,3 +145,7 @@ Settings → Export: "Download CSV" and a live link for Google Sheets (`=IMPORTD
 ## Desktop view for the coach (2026-09-07)
 
 md+ breakpoint: left sidebar (`side-nav.tsx`) replaces the bottom tab bar; coach pages widen to max-w-6xl (client pages max-w-2xl). Clients page and client detail are two columns. Program editor: days left, settings right. Day editor: table of exercises with inline target inputs (each row is its own form via the `form` attribute; up/down/remove use `formAction`), plus a sticky searchable library panel (`library-picker.tsx`) with one-click add. Mobile markup unchanged (`md:hidden` / `hidden md:block`).
+
+## Coach logs for a client (2026-09-09)
+
+RLS: coach may insert/update/delete `workouts`, `set_logs`, `workout_exercise_notes`. Client page (coach) shows "Log a workout for {name}" with the next day and a "Choose a different day" list (`/clients/[id]/log`). `/workout/[dayId]?for=<clientId>` opens the same form under the client's account (client's unit, "last time" from the client's history, draft key per client); `finishWorkout`/`skipDay` take `clientId`, no push is sent when the coach logs. Coach can also edit/delete a client's workout from its detail page.

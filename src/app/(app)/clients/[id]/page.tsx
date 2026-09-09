@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, MessageSquare, TrendingUp } from "lucide-react";
+import { ChevronRight, MessageSquare, Play, TrendingUp } from "lucide-react";
+import { getActiveProgram } from "@/lib/client-data";
 import { requireCoach } from "@/lib/coach";
 import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
@@ -19,13 +20,13 @@ export default async function ClientPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; renamed?: string }>;
+  searchParams: Promise<{ error?: string; renamed?: string; done?: string; skipped?: string }>;
 }) {
   const coach = await requireCoach();
   const locale = await getRequestLocale(coach.locale);
   const t = makeT(locale);
   const { id } = await params;
-  const { error, renamed } = await searchParams;
+  const { error, renamed, done, skipped } = await searchParams;
 
   const supabase = await createClient();
   const [{ data: client }, { data: programs }, { data: workouts }] = await Promise.all([
@@ -46,6 +47,8 @@ export default async function ClientPage({
   // Clients, plus the coach's own profile (the coach can train too).
   if (!client || (client.role !== "client" && client.id !== coach.id)) notFound();
   const isSelf = client.id === coach.id;
+  const active = isSelf ? null : await getActiveProgram(client.id);
+  const clientName = client.full_name ?? client.email;
 
   // Opening this page counts as reading the client's comments.
   if (workouts && workouts.length > 0) {
@@ -101,8 +104,46 @@ export default async function ClientPage({
       </form>
       )}
 
+      {done && <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">{t("coach.logged", { name: clientName })}</p>}
+      {skipped && <p className="rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">{t("coach.skippedFor", { name: clientName })}</p>}
+
       <div className="space-y-6 md:grid md:grid-cols-2 md:items-start md:gap-8 md:space-y-0">
       <div className="space-y-6">
+      {!isSelf && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{t("coach.logFor", { name: clientName })}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {!active ? (
+              <p className="text-sm text-muted-foreground">{t("coach.logNoProgram")}</p>
+            ) : active.nextDay ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  {t("coach.logNext")}: {t("prog.week", { n: active.nextDay.week_no })} ·{" "}
+                  {t("prog.day", { n: active.nextDay.day_no })}
+                  {active.nextDay.title ? ` · ${active.nextDay.title}` : ""}
+                </p>
+                <Button
+                  render={<Link href={`/workout/${active.nextDay.id}?for=${client.id}`} />}
+                  className="h-12 w-full text-base"
+                >
+                  <Play className="size-4" fill="currentColor" />
+                  {t("today.start")}
+                </Button>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t("today.allDone")}</p>
+            )}
+            {active && (
+              <Link href={`/clients/${client.id}/log`} className="block text-sm text-primary underline-offset-4 hover:underline">
+                {t("coach.logAnyDay")}
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <section className="space-y-2">
         <h2 className="text-lg font-medium">{t("client.programs")}</h2>
         {!programs || programs.length === 0 ? (

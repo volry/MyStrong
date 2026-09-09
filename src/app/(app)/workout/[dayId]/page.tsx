@@ -8,14 +8,35 @@ import { makeT } from "@/i18n/dictionaries";
 import { formatDate } from "@/lib/format";
 import { WorkoutForm, type PrevSet, type WorkoutItem } from "./workout-form";
 
-export default async function WorkoutPage({ params }: { params: Promise<{ dayId: string }> }) {
+export default async function WorkoutPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ dayId: string }>;
+  searchParams: Promise<{ for?: string }>;
+}) {
   const profile = await getProfile();
   if (!profile) redirect("/login");
   const locale = await getRequestLocale(profile.locale);
   const t = makeT(locale);
   const { dayId } = await params;
+  const { for: forParam } = await searchParams;
 
   const supabase = await createClient();
+
+  // Coach logging on behalf of a client: the workout belongs to the client.
+  let owner = { id: profile.id, name: null as string | null, unit: profile.unit };
+  const forClient = Boolean(forParam && profile.role === "coach" && forParam !== profile.id);
+  if (forClient) {
+    const { data: client } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, unit")
+      .eq("id", forParam!)
+      .maybeSingle();
+    if (!client) notFound();
+    owner = { id: client.id, name: client.full_name ?? client.email, unit: client.unit };
+  }
+
   const [{ data: day }, { data: items }, { data: lastDone }, { data: recent }] = await Promise.all([
     supabase
       .from("program_days")
@@ -33,7 +54,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ dayId:
       .from("workouts")
       .select("performed_at")
       .eq("program_day_id", dayId)
-      .eq("client_id", profile.id)
+      .eq("client_id", owner.id)
       .eq("status", "done")
       .order("performed_at", { ascending: false })
       .limit(1)
@@ -44,7 +65,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ dayId:
       .select(
         "id, performed_at, set_logs(set_no, reps, weight, time_sec, program_exercise:program_exercises!inner(exercise_id))",
       )
-      .eq("client_id", profile.id)
+      .eq("client_id", owner.id)
       .eq("status", "done")
       .order("performed_at", { ascending: false })
       .limit(30),
@@ -77,17 +98,24 @@ export default async function WorkoutPage({ params }: { params: Promise<{ dayId:
     exercise: i.exercise,
   }));
 
+  const backHref = forClient ? `/clients/${owner.id}` : profile.role === "coach" ? "/me" : "/";
+
   return (
     <div className="space-y-4">
       <div>
-        <Link href="/" className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground">
+        <Link href={backHref} className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground">
           <ChevronLeft className="size-4" />
-          {day.program.name}
+          {forClient ? owner.name : day.program.name}
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">
           {t("prog.week", { n: day.week_no })} · {t("prog.day", { n: day.day_no })}
         </h1>
         {day.title && <p className="text-muted-foreground">{day.title}</p>}
+        {forClient && (
+          <p className="mt-1 rounded-lg bg-secondary px-3 py-1.5 text-sm text-secondary-foreground">
+            {t("coach.loggingFor", { name: owner.name ?? "" })}
+          </p>
+        )}
       </div>
 
       {lastDone && (
@@ -98,11 +126,12 @@ export default async function WorkoutPage({ params }: { params: Promise<{ dayId:
 
       <WorkoutForm
         locale={locale}
-        unit={profile.unit}
+        unit={owner.unit}
         dayId={day.id}
         items={workoutItems}
         previous={previous}
         canLog
+        clientId={forClient ? owner.id : undefined}
       />
     </div>
   );

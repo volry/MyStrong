@@ -125,6 +125,8 @@ type Props = {
   items: WorkoutItem[];
   previous: Record<string, PrevSet[]>;
   canLog: boolean;
+  /** Coach logging for a client: the workout is saved under this client. */
+  clientId?: string;
 } & (
   | { mode?: "log" }
   | {
@@ -138,10 +140,10 @@ type Props = {
 );
 
 export function WorkoutForm(props: Props) {
-  const { locale, unit, dayId, items, previous, canLog } = props;
+  const { locale, unit, dayId, items, previous, canLog, clientId } = props;
   const isEdit = props.mode === "edit";
   const t = makeT(locale);
-  const draftKey = `mystrong:draft:${dayId}`;
+  const draftKey = `mystrong:draft:${dayId}:${clientId ?? "me"}`;
   const [rows, setRows] = useState<Record<string, Row[]>>(() =>
     props.mode === "edit" ? props.initialRows : buildRows(items, previous, unit),
   );
@@ -263,7 +265,7 @@ export function WorkoutForm(props: Props) {
               sets,
               notes: noteList,
             })
-          : await finishWorkout({ dayId, comment, sets, notes: noteList });
+          : await finishWorkout({ dayId, comment, sets, notes: noteList, clientId });
       if (result?.error) {
         setError(result.error);
         return;
@@ -453,6 +455,7 @@ export function WorkoutForm(props: Props) {
           {!isEdit && (
             <form action={skipDay} className="pt-2">
               <input type="hidden" name="day_id" value={dayId} />
+              {clientId && <input type="hidden" name="client_id" value={clientId} />}
               <ConfirmButton
                 type="submit"
                 variant="ghost"
