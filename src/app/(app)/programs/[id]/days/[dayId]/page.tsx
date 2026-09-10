@@ -344,11 +344,11 @@ export default async function DayPage({
             </p>
           ) : (
             <LibraryPicker
-              exercises={library}
+              exercises={library.map((e) => ({ id: e.id, name: e.name, muscle_label: muscleLabel(e.muscle_group) }))}
               programId={programId}
               dayId={day.id}
               addAction={addProgramExercise}
-              labels={{ search: t("day.search"), empty: t("ex.noMatch"), muscle: muscleLabel }}
+              labels={{ search: t("day.search"), empty: t("ex.noMatch") }}
             />
           )}
           <p className="mt-2 text-xs text-muted-foreground">{t("day.libraryHint")}</p>

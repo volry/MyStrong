@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createProgram } from "../../programs/actions";
 import { renameClient } from "../../actions";
+import { ClientName } from "./client-name";
 
 export default async function ClientPage({
   params,
@@ -66,7 +67,19 @@ export default async function ClientPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{client.full_name ?? client.email}</h1>
+        {isSelf ? (
+          <h1 className="text-2xl font-semibold tracking-tight">{clientName}</h1>
+        ) : (
+          <ClientName
+            id={client.id}
+            name={client.full_name}
+            email={client.email}
+            action={renameClient}
+            labels={{ rename: t("client.rename"), save: t("common.save"), cancel: t("common.cancel") }}
+          />
+        )}
+        {renamed && <p className="text-sm text-primary">{t("common.saved")}</p>}
+        {error === "rename" && <p className="text-sm text-destructive">{t("common.error")}</p>}
         <p className="text-sm text-muted-foreground">{client.email}</p>
         <p className="mt-1 text-sm text-muted-foreground">
           {t("client.lastWorkout")}:{" "}
@@ -82,27 +95,6 @@ export default async function ClientPage({
           {t("coach.progress")}
         </Button>
       </div>
-
-      {!isSelf && (
-      <form action={renameClient} className="space-y-2">
-        <input type="hidden" name="id" value={client.id} />
-        <Label htmlFor="full_name">{t("client.rename")}</Label>
-        <div className="flex gap-2">
-          <Input
-            id="full_name"
-            name="full_name"
-            defaultValue={client.full_name ?? ""}
-            maxLength={80}
-            className="h-12 flex-1 text-base"
-          />
-          <Button type="submit" variant="secondary" className="h-12">
-            {t("common.save")}
-          </Button>
-        </div>
-        {renamed && <p className="text-sm text-primary">{t("common.saved")}</p>}
-        {error === "rename" && <p className="text-sm text-destructive">{t("common.error")}</p>}
-      </form>
-      )}
 
       {done && <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">{t("coach.logged", { name: clientName })}</p>}
       {skipped && <p className="rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">{t("coach.skippedFor", { name: clientName })}</p>}

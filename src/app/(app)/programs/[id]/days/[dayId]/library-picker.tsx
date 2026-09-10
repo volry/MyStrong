@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
-export type LibraryExercise = { id: string; name: string; muscle_group: string | null };
+/** Muscle label is resolved on the server: client components can't receive functions. */
+export type LibraryExercise = { id: string; name: string; muscle_label: string | null };
 
 /** Desktop: searchable exercise library with one-click add into the current day. */
 export function LibraryPicker({
@@ -18,7 +19,7 @@ export function LibraryPicker({
   programId: string;
   dayId: string;
   addAction: (formData: FormData) => void | Promise<void>;
-  labels: { search: string; empty: string; muscle: (g: string | null) => string | null };
+  labels: { search: string; empty: string };
 }) {
   const [q, setQ] = useState("");
   const filtered = useMemo(() => {
@@ -45,9 +46,7 @@ export function LibraryPicker({
             <li key={e.id} className="flex items-center gap-2 px-3 py-2">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">{e.name}</div>
-                {labels.muscle(e.muscle_group) && (
-                  <div className="text-xs text-muted-foreground">{labels.muscle(e.muscle_group)}</div>
-                )}
+                {e.muscle_label && <div className="text-xs text-muted-foreground">{e.muscle_label}</div>}
               </div>
               <form action={addAction}>
                 <input type="hidden" name="program_id" value={programId} />
