@@ -28,8 +28,15 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Refreshes the session if needed. Do not put code between createServerClient and this call.
-  const { data } = await supabase.auth.getClaims();
-  const isSignedIn = Boolean(data?.claims);
+  // A stale refresh token (signed out elsewhere, cookie rotated) must not crash the request:
+  // treat it as signed out so the user lands on /login instead of an error page.
+  let isSignedIn = false;
+  try {
+    const { data } = await supabase.auth.getClaims();
+    isSignedIn = Boolean(data?.claims);
+  } catch {
+    isSignedIn = false;
+  }
 
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"));

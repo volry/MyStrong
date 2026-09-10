@@ -6,12 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
 import { formatDate } from "@/lib/format";
-import {
-  WorkoutForm,
-  rowsFromSets,
-  type PrevSet,
-  type WorkoutItem,
-} from "../../../workout/[dayId]/workout-form";
+import { WorkoutForm } from "../../../workout/[dayId]/workout-form";
+import { rowsFromSets, type PrevSet, type WorkoutItem } from "@/lib/workout-rows";
 
 export default async function EditWorkoutPage({ params }: { params: Promise<{ id: string }> }) {
   const profile = await getProfile();

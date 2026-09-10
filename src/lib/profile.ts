@@ -13,8 +13,13 @@ export type Profile = {
 /** Current user's profile, or null when signed out. Cached per request. */
 export const getProfile = cache(async (): Promise<Profile | null> => {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
+  let userId: string | undefined;
+  try {
+    const { data } = await supabase.auth.getClaims();
+    userId = data?.claims?.sub;
+  } catch {
+    return null;
+  }
   if (!userId) return null;
 
   const { data: profile } = await supabase
