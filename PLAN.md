@@ -149,3 +149,7 @@ md+ breakpoint: left sidebar (`side-nav.tsx`) replaces the bottom tab bar; coach
 ## Coach logs for a client (2026-09-09)
 
 RLS: coach may insert/update/delete `workouts`, `set_logs`, `workout_exercise_notes`. Client page (coach) shows "Log a workout for {name}" with the next day and a "Choose a different day" list (`/clients/[id]/log`). `/workout/[dayId]?for=<clientId>` opens the same form under the client's account (client's unit, "last time" from the client's history, draft key per client); `finishWorkout`/`skipDay` take `clientId`, no push is sent when the coach logs. Coach can also edit/delete a client's workout from its detail page.
+
+## Second coach (2026-09-10)
+
+`invites` gained `role` (default client) and `full_name`; the sign-up trigger copies both into the profile. Invite for yar.yevd@gmail.com inserted with role coach, name Ярослав; he creates his account via "Create an account". No UI for coach invites yet (DB only). All coaches share everything: every coach sees every client, program, exercise and gets workout-finished pushes. Per-coach separation (coach_id on profiles/programs) is a possible follow-up.
