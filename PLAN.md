@@ -153,3 +153,7 @@ RLS: coach may insert/update/delete `workouts`, `set_logs`, `workout_exercise_no
 ## Second coach (2026-09-10)
 
 `invites` gained `role` (default client) and `full_name`; the sign-up trigger copies both into the profile. Invite for yar.yevd@gmail.com inserted with role coach, name Ярослав; he creates his account via "Create an account". No UI for coach invites yet (DB only). All coaches share everything: every coach sees every client, program, exercise and gets workout-finished pushes. Per-coach separation (coach_id on profiles/programs) is a possible follow-up.
+
+## Weekly Google Drive backup (2026-09-10)
+
+Vercel Cron (`vercel.json`, Sundays 03:00 UTC) → `/api/cron/backup` (guarded by `CRON_SECRET`) → `runBackup()` in `src/lib/backup.ts`: `backup_dump(secret)` SQL function returns every app table as JSON; uploaded to a "myStrong backups" folder in the coach's Google Drive via OAuth refresh token; last 12 files kept. Config lives in `private.backup_state` (secret, refresh token, folder id, last run) and is reached only through secret-gated SECURITY DEFINER functions. One-time connect: Settings → "Connect Google Drive" → `/api/backup/google/start` → Google consent (scope drive.file + email) → `/api/backup/google/callback`. Env: `BACKUP_SECRET`, `CRON_SECRET` (set), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (owner must create an OAuth client in Google Cloud; redirect URI https://mystrong.vercel.app/api/backup/google/callback). auth.users (password hashes) are not in the dump; profiles + invites are enough to re-invite.

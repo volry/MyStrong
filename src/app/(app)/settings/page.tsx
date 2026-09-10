@@ -8,17 +8,18 @@ import { Label } from "@/components/ui/label";
 import { signOut, updateProfile } from "../actions";
 import { PushToggle } from "./push-toggle";
 import { ExportSection } from "./export-section";
+import { BackupSection } from "./backup-section";
 
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string; export?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; export?: string; backup?: string }>;
 }) {
   const profile = await getProfile();
   if (!profile) redirect("/login");
   const locale = await getRequestLocale(profile.locale);
   const t = makeT(locale);
-  const { saved, error, export: exportFlag } = await searchParams;
+  const { saved, error, export: exportFlag, backup } = await searchParams;
 
   const selectClass =
     "h-12 w-full rounded-lg border border-input bg-background px-3 text-base";
@@ -75,6 +76,8 @@ export default async function SettingsPage({
       )}
 
       <ExportSection t={t} renewed={exportFlag === "new"} />
+
+      {profile.role === "coach" && <BackupSection t={t} locale={locale} flag={backup} />}
 
       <form action={signOut}>
         <Button type="submit" variant="outline" className="h-12 w-full text-base">

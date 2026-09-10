@@ -471,6 +471,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      backup_dump: {
+        Args: { p_secret: string }
+        Returns: Json
+      }
+      backup_get_config: {
+        Args: { p_secret: string }
+        Returns: {
+          google_refresh_token: string | null
+          google_folder_id: string | null
+          google_account: string | null
+          last_run_at: string | null
+          last_status: string | null
+          last_file: string | null
+        }[]
+      }
+      backup_set_google: {
+        Args: { p_secret: string; p_refresh_token: string; p_folder_id: string; p_account: string }
+        Returns: undefined
+      }
+      backup_mark_run: {
+        Args: { p_secret: string; p_status: string; p_file: string }
+        Returns: undefined
+      }
       export_sets: {
         Args: { p_token: string }
         Returns: {
