@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ChevronRight, Plus, Search, Video } from "lucide-react";
-import { requireCoach } from "@/lib/coach";
+import { redirect } from "next/navigation";
+import { ChevronLeft, ChevronRight, Plus, Search, Video } from "lucide-react";
+import { getProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT, MUSCLE_GROUPS, type MuscleGroup } from "@/i18n/dictionaries";
@@ -13,8 +14,9 @@ export default async function ExercisesPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const coach = await requireCoach();
-  const t = makeT(await getRequestLocale(coach.locale));
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  const t = makeT(await getRequestLocale(profile.locale));
   const { q } = await searchParams;
 
   const supabase = await createClient();
@@ -30,6 +32,12 @@ export default async function ExercisesPage({
 
   return (
     <div className="space-y-4">
+      {profile.role !== "coach" && (
+        <Link href="/my-programs" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+          <ChevronLeft className="size-4" />
+          {t("mine.title")}
+        </Link>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">{t("ex.title")}</h1>
         <Button render={<Link href="/exercises/new" />} size="sm">

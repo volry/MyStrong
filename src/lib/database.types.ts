@@ -263,33 +263,48 @@ export type Database = {
       programs: {
         Row: {
           client_id: string
+          coach_feedback: string | null
           created_at: string
           created_by: string | null
           id: string
           is_active: boolean
           name: string
           notes: string | null
+          review_status: Database["public"]["Enums"]["program_review"]
+          reviewed_at: string | null
+          reviewed_by: string | null
           start_date: string | null
+          submitted_at: string | null
         }
         Insert: {
           client_id: string
+          coach_feedback?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
           name: string
           notes?: string | null
+          review_status?: Database["public"]["Enums"]["program_review"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           start_date?: string | null
+          submitted_at?: string | null
         }
         Update: {
           client_id?: string
+          coach_feedback?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
           name?: string
           notes?: string | null
+          review_status?: Database["public"]["Enums"]["program_review"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           start_date?: string | null
+          submitted_at?: string | null
         }
         Relationships: [
           {
@@ -302,6 +317,13 @@ export type Database = {
           {
             foreignKeyName: "programs_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programs_reviewed_by_fkey"
+            columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -494,6 +516,10 @@ export type Database = {
         Args: { p_secret: string; p_status: string; p_file: string }
         Returns: undefined
       }
+      set_my_active_program: {
+        Args: { p_active?: boolean; p_program_id: string }
+        Returns: undefined
+      }
       export_sets: {
         Args: { p_token: string }
         Returns: {
@@ -517,6 +543,7 @@ export type Database = {
       }
     }
     Enums: {
+      program_review: "self" | "pending" | "approved" | "changes_requested"
       user_role: "coach" | "client"
       weight_unit: "kg" | "lb"
       workout_status: "done" | "skipped"
@@ -647,6 +674,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      program_review: ["self", "pending", "approved", "changes_requested"],
       user_role: ["coach", "client"],
       weight_unit: ["kg", "lb"],
       workout_status: ["done", "skipped"],

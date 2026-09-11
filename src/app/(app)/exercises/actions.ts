@@ -3,20 +3,30 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireCoach } from "@/lib/coach";
+import { getProfile, type Profile } from "@/lib/profile";
 import { str, nullable } from "@/lib/form";
 import { youtubeId } from "@/lib/youtube";
 import { MUSCLE_GROUPS, type MuscleGroup, type TranslationKey } from "@/i18n/dictionaries";
 
 export type ExerciseFormState = { error: TranslationKey } | null;
 
+/** Anyone signed in may add to the shared library; only the author (or a coach) may change an entry. */
+async function mayEdit(profile: Profile, id: string): Promise<boolean> {
+  if (profile.role === "coach") return true;
+  const supabase = await createClient();
+  const { data } = await supabase.from("exercises").select("created_by").eq("id", id).maybeSingle();
+  return data?.created_by === profile.id;
+}
+
 export async function saveExercise(
   _prev: ExerciseFormState,
   formData: FormData,
 ): Promise<ExerciseFormState> {
-  const coach = await requireCoach();
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
 
   const id = str(formData, "id");
+  if (id && !(await mayEdit(profile, id))) return { error: "ex.notYours" };
   const name = str(formData, "name");
   if (!name) return { error: "common.error" };
 
@@ -38,7 +48,7 @@ export async function saveExercise(
   const supabase = await createClient();
   const { error } = id
     ? await supabase.from("exercises").update(payload).eq("id", id)
-    : await supabase.from("exercises").insert({ ...payload, created_by: coach.id });
+    : await supabase.from("exercises").insert({ ...payload, created_by: profile.id });
 
   if (error) return { error: "common.error" };
 
@@ -47,9 +57,11 @@ export async function saveExercise(
 }
 
 export async function deleteExercise(formData: FormData) {
-  await requireCoach();
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
   const id = str(formData, "id");
   if (!id) redirect("/exercises");
+  if (!(await mayEdit(profile, id))) redirect(`/exercises/${id}?error=notYours`);
 
   const supabase = await createClient();
   const { error } = await supabase.from("exercises").delete().eq("id", id);

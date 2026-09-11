@@ -3,7 +3,7 @@
 A small gym app for one coach and her clients, installed on iPhone as a web app.
 
 - Coach: exercise library with YouTube videos, program builder (weeks, days, targets), copy programs, see client results and comments, progress charts, own training.
-- Client: today's workout, set-by-set logging prefilled from last time, comments to the coach, program overview, history, progress charts.
+- Client: today's workout, set-by-set logging prefilled from last time, comments to the coach, program overview, history, progress charts, and their own program builder — train by it alone or send it to the coach for approval.
 - English and Ukrainian UI, kg/lb, push notifications, offline fallback, CSV export and a Google Sheets live link.
 
 ## Stack

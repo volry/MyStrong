@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ChevronRight, Copy, Plus } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Plus } from "lucide-react";
 import { requireCoach } from "@/lib/coach";
 import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
+import { formatDate } from "@/lib/format";
 import { makeT } from "@/i18n/dictionaries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmButton } from "@/components/confirm-button";
+import { ReviewBadge } from "@/components/review-badge";
 import {
   addDay,
   addWeek,
@@ -18,6 +20,7 @@ import {
   deleteProgram,
   deleteWeek,
   duplicateWeek,
+  reviewProgram,
   setProgramActive,
   updateProgram,
 } from "../actions";
@@ -27,19 +30,21 @@ export default async function ProgramPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; reviewed?: string }>;
 }) {
   const coach = await requireCoach();
   const locale = await getRequestLocale(coach.locale);
   const t = makeT(locale);
   const { id } = await params;
-  const { saved, error } = await searchParams;
+  const { saved, error, reviewed } = await searchParams;
 
   const supabase = await createClient();
   const [{ data: program }, { data: days }, { data: people }] = await Promise.all([
     supabase
       .from("programs")
-      .select("id, name, start_date, notes, is_active, client_id, client:profiles!client_id(full_name, email)")
+      .select(
+        "id, name, start_date, notes, is_active, client_id, created_by, review_status, coach_feedback, submitted_at, client:profiles!client_id(full_name, email)",
+      )
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -62,6 +67,8 @@ export default async function ProgramPage({
     weeks.set(d.week_no, list);
   }
   const clientName = program.client?.full_name ?? program.client?.email ?? "";
+  // Written by the client for themselves: the coach reviews it instead of owning it.
+  const clientMade = program.created_by === program.client_id && program.client_id !== coach.id;
 
   return (
     <div className="space-y-6">
@@ -73,9 +80,10 @@ export default async function ProgramPage({
           <ChevronLeft className="size-4" />
           {clientName}
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{program.name}</h1>
           {program.is_active && <Badge>{t("client.active")}</Badge>}
+          {clientMade && <ReviewBadge status={program.review_status} t={t} />}
         </div>
         <p className="text-sm text-muted-foreground">{t("prog.forClient", { name: clientName })}</p>
       </div>
@@ -158,6 +166,44 @@ export default async function ProgramPage({
 
       {/* Program settings */}
       <section className="mt-6 space-y-4 border-t pt-6 md:mt-0 md:border-t-0 md:pt-0">
+        {clientMade && (
+          <form action={reviewProgram} className="space-y-3 rounded-xl border p-4">
+            <input type="hidden" name="id" value={program.id} />
+            <h2 className="font-medium">{t("coach.review")}</h2>
+            <p className="text-sm text-muted-foreground">
+              {t("coach.reviewWhat", { name: clientName })}
+              {program.submitted_at ? ` · ${formatDate(program.submitted_at, locale)}` : ""}
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="feedback">{t("coach.reviewFeedback")}</Label>
+              <Textarea
+                id="feedback"
+                name="feedback"
+                rows={3}
+                defaultValue={program.coach_feedback ?? ""}
+                placeholder={t("coach.reviewFeedbackHint")}
+                className="text-base"
+              />
+            </div>
+            {reviewed && <p className="text-sm text-primary">{t("coach.reviewed")}</p>}
+            <div className="flex gap-2">
+              <Button type="submit" name="decision" value="approve" className="h-12 flex-1 text-base">
+                <Check className="size-4" />
+                {t("coach.approve")}
+              </Button>
+              <Button
+                type="submit"
+                name="decision"
+                value="changes"
+                variant="secondary"
+                className="h-12 flex-1 text-base"
+              >
+                {t("coach.requestChanges")}
+              </Button>
+            </div>
+          </form>
+        )}
+
         <form action={updateProgram} className="space-y-3">
           <input type="hidden" name="id" value={program.id} />
           <div className="space-y-2">

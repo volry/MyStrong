@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, Trash2, Video } from "lucide-react";
 import { requireCoach } from "@/lib/coach";
 import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
-import { makeT, MUSCLE_GROUPS, type MuscleGroup, type T } from "@/i18n/dictionaries";
+import { makeT, MUSCLE_GROUPS, type MuscleGroup } from "@/i18n/dictionaries";
 import { formatTarget } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
+import { TargetFields } from "@/components/target-fields";
 import { LibraryPicker } from "./library-picker";
 import {
   addProgramExercise,
@@ -391,64 +392,5 @@ function NumInput({
       defaultValue={value ?? ""}
       className="h-9 w-16 rounded-md border border-input bg-background px-1 text-center text-sm tabular-nums"
     />
-  );
-}
-
-type TargetValues = {
-  target_sets: number | null;
-  target_reps: number | null;
-  target_weight: number | null;
-  target_time_sec: number | null;
-  target_rpe: number | null;
-  coach_notes: string | null;
-};
-
-function TargetFields({ t, values, idPrefix }: { t: T; values?: TargetValues; idPrefix: string }) {
-  const field = (
-    name: keyof TargetValues,
-    label: string,
-    opts: { step?: string; inputMode: "numeric" | "decimal"; max?: number },
-  ) => (
-    <div className="space-y-1">
-      <Label htmlFor={`${idPrefix}-${name}`} className="text-xs">
-        {label}
-      </Label>
-      <Input
-        id={`${idPrefix}-${name}`}
-        name={name}
-        type="number"
-        min={0}
-        max={opts.max}
-        step={opts.step ?? "1"}
-        inputMode={opts.inputMode}
-        defaultValue={values?.[name] ?? ""}
-        className="h-11 px-2 text-center text-base"
-      />
-    </div>
-  );
-
-  return (
-    <>
-      <div className="grid grid-cols-3 gap-2">
-        {field("target_sets", t("day.sets"), { inputMode: "numeric", max: 50 })}
-        {field("target_reps", t("day.reps"), { inputMode: "numeric", max: 1000 })}
-        {field("target_weight", t("day.weight"), { inputMode: "decimal", step: "0.5" })}
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {field("target_time_sec", t("day.time"), { inputMode: "numeric" })}
-        {field("target_rpe", t("day.rpe"), { inputMode: "decimal", step: "0.5", max: 10 })}
-      </div>
-      <div className="space-y-1">
-        <Label htmlFor={`${idPrefix}-coach_notes`} className="text-xs">
-          {t("day.notes")}
-        </Label>
-        <Input
-          id={`${idPrefix}-coach_notes`}
-          name="coach_notes"
-          defaultValue={values?.coach_notes ?? ""}
-          className="h-11 text-base"
-        />
-      </div>
-    </>
   );
 }

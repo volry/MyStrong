@@ -157,3 +157,51 @@ RLS: coach may insert/update/delete `workouts`, `set_logs`, `workout_exercise_no
 ## Weekly Google Drive backup (2026-09-10)
 
 Vercel Cron (`vercel.json`, Sundays 03:00 UTC) → `/api/cron/backup` (guarded by `CRON_SECRET`) → `runBackup()` in `src/lib/backup.ts`: `backup_dump(secret)` SQL function returns every app table as JSON; uploaded to a "myStrong backups" folder in the coach's Google Drive via OAuth refresh token; last 12 files kept. Config lives in `private.backup_state` (secret, refresh token, folder id, last run) and is reached only through secret-gated SECURITY DEFINER functions. One-time connect: Settings → "Connect Google Drive" → `/api/backup/google/start` → Google consent (scope drive.file + email) → `/api/backup/google/callback`. Env: `BACKUP_SECRET`, `CRON_SECRET` (set), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (owner must create an OAuth client in Google Cloud; redirect URI https://mystrong.vercel.app/api/backup/google/callback). auth.users (password hashes) are not in the dump; profiles + invites are enough to re-invite.
+
+## Clients can write their own programs (2026-09-11)
+
+A client is no longer only a recipient. The Program tab leads to "My programs"
+(`/my-programs`), where a client builds a plan of their own — weeks, days,
+exercises, targets, the same shape the coach builds — and then either trains by
+it or sends it to the coach for approval.
+
+- `programs.review_status` (`program_review` enum): `approved` (written or
+  approved by a coach — the default, so every existing program behaves exactly as
+  before), `self` (the client trains by it alone), `pending` (sent to the coach),
+  `changes_requested`. Plus `coach_feedback`, `submitted_at`, `reviewed_at`,
+  `reviewed_by`.
+- RLS: a client may insert/update/delete `programs` where
+  `client_id = created_by = auth.uid()`, and the `program_days` /
+  `program_exercises` beneath them (`private.owns_own_program`,
+  `private.owns_own_program_day`, in the style of `private.owns_program_day`).
+  Coach policies are untouched.
+- `private.guard_program_review()` (trigger on insert/update) stops a signed-in
+  non-coach from setting anything but `self`/`pending` or writing the review
+  columns, so nobody approves their own program. It deliberately skips writes
+  with no session (`auth.uid() is null`): service_role, the SQL editor and a
+  restore from backup have no client to restrain, and an earlier version of the
+  trigger broke exactly those.
+- Making a program active has to deactivate the currently active one, which may
+  be the coach's — a row the client's policy cannot touch — so it goes through
+  `public.set_my_active_program(p_program_id, p_active)` (SECURITY DEFINER,
+  checks `client_id = auth.uid()`, execute granted to `authenticated` only;
+  Supabase's default privileges hand new functions to `anon` too, hence the
+  explicit revoke). `programs_one_active_per_client` still holds.
+  `/my-programs` lists the coach's programs with "Switch to it", so the two
+  plans can be swapped back and forth.
+- Editing is blocked while `pending` ("take it back" un-submits it); editing an
+  `approved` program drops it to `self`, because it is no longer what the coach
+  approved.
+- Coach: pending programs at the top of the Clients screen, a status badge on the
+  client page and in the program editor, and an "Approve / Ask for changes" panel
+  whose reply the client sees. Push both ways.
+- The exercise library is open to clients: anyone may add one, only the author
+  (or a coach) may edit or delete it; other entries render read-only.
+- Migrations (applied via the Supabase MCP connector, as always — they are in the
+  project's migration history, not in this repo): `client_written_programs`,
+  `program_review_guard_skips_backend`, `set_my_active_program_authenticated_only`.
+- Verified against the live database by running both roles' operations inside a
+  rolled-back transaction: a client cannot pre-approve, self-approve, write coach
+  feedback, edit or activate the coach's program, add days to it, forge an
+  exercise author, or edit the coach's exercises; the coach can approve; exactly
+  one program stays active after switching.

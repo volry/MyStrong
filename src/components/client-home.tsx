@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Play, Settings2 } from "lucide-react";
+import { ChevronRight, PencilRuler, Play, Settings2 } from "lucide-react";
 import type { Profile } from "@/lib/profile";
 import { makeT, type Locale } from "@/i18n/dictionaries";
 import { createClient } from "@/lib/supabase/server";
@@ -50,7 +50,22 @@ export async function ClientHome({
 
       {!data ? (
         <Card>
-          <CardContent className="pt-6 text-muted-foreground">{t("home.noProgram")}</CardContent>
+          <CardContent className="space-y-3 pt-6">
+            <p className="text-muted-foreground">{t("home.noProgram")}</p>
+            {!manageHref && (
+              <>
+                <Button
+                  render={<Link href="/my-programs" />}
+                  variant="outline"
+                  className="h-12 w-full text-base"
+                >
+                  <PencilRuler className="size-4" />
+                  {t("mine.startOwn")}
+                </Button>
+                <p className="text-xs text-muted-foreground">{t("mine.subtitle")}</p>
+              </>
+            )}
+          </CardContent>
         </Card>
       ) : data.nextDay ? (
         <Card>
@@ -87,7 +102,9 @@ export async function ClientHome({
       {data?.program.notes && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("today.coachNotes")}</CardTitle>
+            <CardTitle className="text-base">
+              {data.program.created_by === profile.id ? t("mine.notes") : t("today.coachNotes")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="whitespace-pre-wrap text-sm">{data.program.notes}</CardContent>
         </Card>
