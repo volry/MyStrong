@@ -36,23 +36,30 @@ export default async function HomePage({
 
 async function CoachHome({ t, locale, params }: { t: T; locale: Locale; params: Search }) {
   const supabase = await createClient();
-  const [{ data: clients }, { data: invites }, { data: workouts }, { data: reads }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, email, full_name, created_at")
-      .eq("role", "client")
-      .order("created_at"),
-    supabase
-      .from("invites")
-      .select("email, created_at")
-      .is("accepted_at", null)
-      .order("created_at"),
-    supabase
-      .from("workouts")
-      .select("id, client_id, performed_at, client_comment")
-      .order("performed_at", { ascending: false }),
-    supabase.from("coach_reads").select("workout_id"),
-  ]);
+  const [{ data: clients }, { data: invites }, { data: workouts }, { data: reads }, { data: toReview }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, created_at")
+        .eq("role", "client")
+        .order("created_at"),
+      supabase
+        .from("invites")
+        .select("email, created_at")
+        .is("accepted_at", null)
+        .order("created_at"),
+      supabase
+        .from("workouts")
+        .select("id, client_id, performed_at, client_comment")
+        .order("performed_at", { ascending: false }),
+      supabase.from("coach_reads").select("workout_id"),
+      // Programs clients wrote themselves and sent over for approval.
+      supabase
+        .from("programs")
+        .select("id, name, submitted_at, client:profiles!client_id(id, full_name, email)")
+        .eq("review_status", "pending")
+        .order("submitted_at", { ascending: false }),
+    ]);
 
   const seen = new Set((reads ?? []).map((r) => r.workout_id));
   const stats = new Map<string, { last: string; unread: number }>();
@@ -68,6 +75,27 @@ async function CoachHome({ t, locale, params }: { t: T; locale: Locale; params: 
 
       <div className="space-y-6 md:grid md:grid-cols-[1fr_360px] md:items-start md:gap-8 md:space-y-0">
       <div className="space-y-6">
+      {toReview && toReview.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium text-muted-foreground">{t("coach.toReview")}</h2>
+          <ul className="divide-y rounded-xl border border-primary/40">
+            {toReview.map((p) => (
+              <li key={p.id}>
+                <Link href={`/programs/${p.id}`} className="flex items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{p.name}</div>
+                    <div className="truncate text-sm text-muted-foreground">
+                      {t("coach.reviewFrom", { name: p.client?.full_name ?? p.client?.email ?? "" })}
+                      {p.submitted_at ? ` · ${formatDate(p.submitted_at, locale)}` : ""}
+                    </div>
+                  </div>
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {clients && clients.length > 0 ? (
         <ul className="divide-y rounded-xl border">
           {clients.map((c) => {

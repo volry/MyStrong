@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ReviewBadge } from "@/components/review-badge";
 import { createProgram } from "../../programs/actions";
 import { renameClient } from "../../actions";
 import { ClientName } from "./client-name";
@@ -34,7 +35,7 @@ export default async function ClientPage({
     supabase.from("profiles").select("id, email, full_name, role").eq("id", id).maybeSingle(),
     supabase
       .from("programs")
-      .select("id, name, start_date, is_active, created_at")
+      .select("id, name, start_date, is_active, created_at, created_by, review_status")
       .eq("client_id", id)
       .order("is_active", { ascending: false })
       .order("created_at", { ascending: false }),
@@ -146,9 +147,10 @@ export default async function ClientPage({
               <li key={p.id}>
                 <Link href={`/programs/${p.id}`} className="flex items-center gap-3 px-4 py-3">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="truncate font-medium">{p.name}</span>
                       {p.is_active && <Badge>{t("client.active")}</Badge>}
+                      {p.created_by === client.id && <ReviewBadge status={p.review_status} t={t} />}
                     </div>
                     {p.start_date && (
                       <div className="text-sm text-muted-foreground">

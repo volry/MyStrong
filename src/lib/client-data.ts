@@ -7,7 +7,9 @@ export async function getActiveProgram(clientId: string) {
   const [{ data: program }, { data: workouts }] = await Promise.all([
     supabase
       .from("programs")
-      .select("id, name, start_date, notes, program_days(id, week_no, day_no, title, program_exercises(count))")
+      .select(
+        "id, name, start_date, notes, created_by, review_status, program_days(id, week_no, day_no, title, program_exercises(count))",
+      )
       .eq("client_id", clientId)
       .eq("is_active", true)
       .order("week_no", { referencedTable: "program_days" })
@@ -35,7 +37,14 @@ export async function getActiveProgram(clientId: string) {
   const list = program.program_days;
   const nextDay = list.find((d) => !passed.has(d.id)) ?? null;
   return {
-    program: { id: program.id, name: program.name, start_date: program.start_date, notes: program.notes },
+    program: {
+      id: program.id,
+      name: program.name,
+      start_date: program.start_date,
+      notes: program.notes,
+      created_by: program.created_by,
+      review_status: program.review_status,
+    },
     days: list,
     doneMap,
     nextDay,

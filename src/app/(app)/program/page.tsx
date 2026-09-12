@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Check, ChevronRight, Circle } from "lucide-react";
+import { Check, ChevronRight, Circle, PencilRuler } from "lucide-react";
 import { getProfile } from "@/lib/profile";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
 import { getActiveProgram } from "@/lib/client-data";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ReviewBadge } from "@/components/review-badge";
 
 export default async function ProgramPage() {
   const profile = await getProfile();
@@ -16,11 +18,22 @@ export default async function ProgramPage() {
 
   const data = await getActiveProgram(profile.id);
 
+  const ownProgramsLink = (
+    <div className="space-y-2 border-t pt-5">
+      <Button render={<Link href="/my-programs" />} variant="outline" className="h-12 w-full text-base">
+        <PencilRuler className="size-4" />
+        {t("mine.title")}
+      </Button>
+      <p className="text-xs text-muted-foreground">{t("mine.subtitle")}</p>
+    </div>
+  );
+
   if (!data) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-5">
         <h1 className="text-2xl font-semibold tracking-tight">{t("program.title")}</h1>
         <p className="text-muted-foreground">{t("program.none")}</p>
+        {ownProgramsLink}
       </div>
     );
   }
@@ -35,7 +48,12 @@ export default async function ProgramPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{data.program.name}</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">{data.program.name}</h1>
+          {data.program.created_by === profile.id && (
+            <ReviewBadge status={data.program.review_status} t={t} />
+          )}
+        </div>
         {data.program.start_date && (
           <p className="text-sm text-muted-foreground">
             {t("program.starts", { date: formatDate(data.program.start_date, locale) })}
@@ -82,6 +100,8 @@ export default async function ProgramPage() {
           </ul>
         </section>
       ))}
+
+      {ownProgramsLink}
     </div>
   );
 }

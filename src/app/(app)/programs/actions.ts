@@ -154,6 +154,40 @@ export async function copyProgram(formData: FormData) {
   redirect(programPath(created.id));
 }
 
+/** Coach's answer to a program a client wrote: approve it, or ask for changes. */
+export async function reviewProgram(formData: FormData) {
+  const coach = await requireCoach();
+  const id = str(formData, "id");
+  const approved = str(formData, "decision") === "approve";
+  if (!id) redirect("/");
+
+  const supabase = await createClient();
+  const { data: program } = await supabase
+    .from("programs")
+    .update({
+      review_status: approved ? "approved" : "changes_requested",
+      coach_feedback: nullable(str(formData, "feedback").slice(0, 2000)),
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: coach.id,
+    })
+    .eq("id", id)
+    .select("name, client_id")
+    .maybeSingle();
+
+  if (program && program.client_id !== coach.id) {
+    await sendPushTo([program.client_id], (t) => ({
+      title: t(approved ? "push.programApproved.title" : "push.programChanges.title"),
+      body: program.name,
+      url: `/my-programs/${id}`,
+    }));
+  }
+
+  revalidatePath("/");
+  revalidatePath(programPath(id));
+  if (program) revalidatePath(`/clients/${program.client_id}`);
+  redirect(`${programPath(id)}?reviewed=1`);
+}
+
 // ---------- weeks & days ----------
 
 export async function addWeek(formData: FormData) {

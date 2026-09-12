@@ -1,11 +1,13 @@
-import { requireCoach } from "@/lib/coach";
+import { redirect } from "next/navigation";
+import { getProfile } from "@/lib/profile";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
 import { ExerciseForm } from "../exercise-form";
 
 export default async function NewExercisePage() {
-  const coach = await requireCoach();
-  const locale = await getRequestLocale(coach.locale);
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  const locale = await getRequestLocale(profile.locale);
   const t = makeT(locale);
 
   return (
