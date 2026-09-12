@@ -17,7 +17,13 @@ export type WorkoutItem = {
   target_time_sec: number | null;
   target_rpe: number | null;
   coach_notes: string | null;
-  exercise: { id: string; name: string; youtube_url: string | null; description: string | null } | null;
+  exercise: {
+    id: string;
+    name: string;
+    youtube_url: string | null;
+    description: string | null;
+    muscle_group: string | null;
+  } | null;
 };
 
 export type Row = { weight: string; reps: string; time: string; done: boolean };

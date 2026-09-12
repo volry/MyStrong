@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
 import { formatDate } from "@/lib/format";
+import { muscleSummary } from "@/lib/muscles";
+import { MuscleBadges } from "@/components/muscle-badges";
 import { WorkoutForm, type PrevSet, type WorkoutItem } from "./workout-form";
 
 export default async function WorkoutPage({
@@ -46,7 +48,7 @@ export default async function WorkoutPage({
     supabase
       .from("program_exercises")
       .select(
-        "id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes, exercise:exercises(id, name, youtube_url, description)",
+        "id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes, exercise:exercises(id, name, youtube_url, description, muscle_group)",
       )
       .eq("program_day_id", dayId)
       .order("position"),
@@ -111,6 +113,9 @@ export default async function WorkoutPage({
           {t("prog.week", { n: day.week_no })} · {t("prog.day", { n: day.day_no })}
         </h1>
         {day.title && <p className="text-muted-foreground">{day.title}</p>}
+        <div className="mt-2">
+          <MuscleBadges groups={muscleSummary(workoutItems)} t={t} />
+        </div>
         {forClient && (
           <p className="mt-1 rounded-lg bg-secondary px-3 py-1.5 text-sm text-secondary-foreground">
             {t("coach.loggingFor", { name: owner.name ?? "" })}

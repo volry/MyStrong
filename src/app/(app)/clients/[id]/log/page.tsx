@@ -8,6 +8,7 @@ import { makeT } from "@/i18n/dictionaries";
 import { getActiveProgram } from "@/lib/client-data";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { MuscleBadges } from "@/components/muscle-badges";
 
 /** Coach picks any day of the client's active program to log on their behalf. */
 export default async function ClientLogPage({ params }: { params: Promise<{ id: string }> }) {
@@ -69,7 +70,7 @@ export default async function ClientLogPage({ params }: { params: Promise<{ id: 
                       ) : (
                         <Circle className={cn("size-7", isNext ? "text-primary" : "text-muted-foreground/40")} />
                       )}
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 space-y-1">
                         <div className="font-medium">
                           {t("prog.day", { n: d.day_no })}
                           {d.title ? ` · ${d.title}` : ""}
@@ -77,8 +78,9 @@ export default async function ClientLogPage({ params }: { params: Promise<{ id: 
                         <div className="text-sm text-muted-foreground">
                           {doneAt
                             ? t("program.doneOn", { date: formatDate(doneAt, locale) })
-                            : t("prog.exercises", { n: d.program_exercises[0]?.count ?? 0 })}
+                            : t("prog.exercises", { n: d.exercises })}
                         </div>
+                        <MuscleBadges groups={d.muscles} t={t} max={3} />
                       </div>
                       <ChevronRight className="size-4 text-muted-foreground" />
                     </Link>
