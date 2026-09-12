@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ReviewBadge } from "@/components/review-badge";
+import { MuscleBadges } from "@/components/muscle-badges";
 
 export default async function ProgramPage() {
   const profile = await getProfile();
@@ -81,7 +82,7 @@ export default async function ProgramPage() {
                     ) : (
                       <Circle className={cn("size-7", isNext ? "text-primary" : "text-muted-foreground/40")} />
                     )}
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 space-y-1">
                       <div className="font-medium">
                         {t("prog.day", { n: d.day_no })}
                         {d.title ? ` · ${d.title}` : ""}
@@ -89,8 +90,9 @@ export default async function ProgramPage() {
                       <div className="text-sm text-muted-foreground">
                         {doneAt
                           ? t("program.doneOn", { date: formatDate(doneAt, locale) })
-                          : t("prog.exercises", { n: d.program_exercises[0]?.count ?? 0 })}
+                          : t("prog.exercises", { n: d.exercises })}
                       </div>
+                      <MuscleBadges groups={d.muscles} t={t} max={3} />
                     </div>
                     <ChevronRight className="size-4 text-muted-foreground" />
                   </Link>

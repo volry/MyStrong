@@ -205,3 +205,33 @@ it or sends it to the coach for approval.
   feedback, edit or activate the coach's program, add days to it, forge an
   exercise author, or edit the coach's exercises; the coach can approve; exactly
   one program stays active after switching.
+
+## Today metrics and muscle groups (2026-09-12)
+
+Today (`ClientHome`) now opens with three tiles — week streak, workouts in the
+last 7 days, days since the last one (`getClientStats`: one query over workout
+dates, no set logs). The next-workout card gained the muscle groups the day
+works, its exercise and set counts with a rough duration (3 min per set), and a
+progress bar "Week 2 of 6 · day 5 of 18". Tiles are hidden until the first
+workout is logged.
+
+`getActiveProgram` now returns days as `{ id, week_no, day_no, title, exercises,
+sets, muscles }` instead of raw rows with a `count` aggregate; every caller was
+updated. Streak logic moved to `src/lib/week.ts` and is shared with `progress.ts`.
+
+Muscle groups are visible wherever an exercise appears: badges on Today, on the
+Program tab per day, on the workout screen (per exercise and a summary for the
+day), in both day editors, and a scrollable group filter in the exercise library.
+Helpers live in `src/lib/muscles.ts`, badges in `src/components/muscle-badges.tsx`.
+
+Library: 73 classic exercises seeded in Ukrainian with muscle groups and short
+technique cues (no videos — the coach adds YouTube links). The owner's nine
+lowercase test entries were left alone; all nine are referenced by existing
+programs, so the app cannot delete them until those programs go.
+
+`Button` now passes `nativeButton={false}` when rendered as a link, which clears
+a Base UI console error that fired on most screens.
+
+Design checked in Chromium at 390px through a temporary preview route (the
+container's proxy blocks Supabase, so the real data path could not be run
+locally).

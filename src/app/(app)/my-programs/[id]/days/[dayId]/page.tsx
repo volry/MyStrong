@@ -6,10 +6,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
 import { formatTarget } from "@/lib/format";
+import { muscleLabel } from "@/lib/muscles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
 import { TargetFields } from "@/components/target-fields";
@@ -49,7 +51,7 @@ export default async function MyDayPage({
     supabase
       .from("program_exercises")
       .select(
-        "id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes, exercise:exercises(id, name, youtube_url)",
+        "id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes, exercise:exercises(id, name, youtube_url, muscle_group)",
       )
       .eq("program_day_id", dayId)
       .order("position"),
@@ -110,7 +112,12 @@ export default async function MyDayPage({
                       <CardTitle className="text-base">
                         {i + 1}. {pe.exercise?.name}
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground">{formatTarget(pe)}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {muscleLabel(t, pe.exercise?.muscle_group) && (
+                          <Badge variant="secondary">{muscleLabel(t, pe.exercise?.muscle_group)}</Badge>
+                        )}
+                        <p className="text-sm text-muted-foreground">{formatTarget(pe)}</p>
+                      </div>
                     </div>
                     {!pending && (
                       <div className="flex shrink-0">

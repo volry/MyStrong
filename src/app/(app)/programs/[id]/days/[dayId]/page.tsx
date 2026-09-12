@@ -4,12 +4,14 @@ import { ArrowDown, ArrowUp, ChevronLeft, Trash2, Video } from "lucide-react";
 import { requireCoach } from "@/lib/coach";
 import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
-import { makeT, MUSCLE_GROUPS, type MuscleGroup } from "@/i18n/dictionaries";
+import { makeT } from "@/i18n/dictionaries";
 import { formatTarget } from "@/lib/format";
+import { muscleLabel } from "@/lib/muscles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
 import { TargetFields } from "@/components/target-fields";
@@ -47,7 +49,7 @@ export default async function DayPage({
     supabase
       .from("program_exercises")
       .select(
-        "id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes, exercise:exercises(id, name, youtube_url)",
+        "id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes, exercise:exercises(id, name, youtube_url, muscle_group)",
       )
       .eq("program_day_id", dayId)
       .order("position"),
@@ -56,8 +58,6 @@ export default async function DayPage({
   if (!day) notFound();
 
   const ids = { program_id: programId, day_id: day.id };
-  const muscleLabel = (g: string | null) =>
-    g && (MUSCLE_GROUPS as readonly string[]).includes(g) ? t(`muscle.${g as MuscleGroup}`) : null;
   const list = items ?? [];
 
   return (
@@ -125,6 +125,11 @@ export default async function DayPage({
                             {pe.exercise?.name}
                             {pe.exercise?.youtube_url && <Video className="size-3.5 text-muted-foreground" />}
                           </div>
+                          {muscleLabel(t, pe.exercise?.muscle_group) && (
+                            <div className="text-xs text-muted-foreground">
+                              {muscleLabel(t, pe.exercise?.muscle_group)}
+                            </div>
+                          )}
                           {saved === pe.id && <div className="text-xs text-primary">{t("common.saved")}</div>}
                         </td>
                         <td className="px-2 py-2">
@@ -218,7 +223,12 @@ export default async function DayPage({
                             <CardTitle className="text-base">
                               {i + 1}. {pe.exercise?.name}
                             </CardTitle>
-                            <p className="text-sm text-muted-foreground">{formatTarget(pe)}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {muscleLabel(t, pe.exercise?.muscle_group) && (
+                                <Badge variant="secondary">{muscleLabel(t, pe.exercise?.muscle_group)}</Badge>
+                              )}
+                              <p className="text-sm text-muted-foreground">{formatTarget(pe)}</p>
+                            </div>
                           </div>
                           <div className="flex shrink-0">
                             <form action={moveProgramExercise}>
@@ -345,7 +355,7 @@ export default async function DayPage({
             </p>
           ) : (
             <LibraryPicker
-              exercises={library.map((e) => ({ id: e.id, name: e.name, muscle_label: muscleLabel(e.muscle_group) }))}
+              exercises={library.map((e) => ({ id: e.id, name: e.name, muscle_label: muscleLabel(t, e.muscle_group) }))}
               programId={programId}
               dayId={day.id}
               addAction={addProgramExercise}

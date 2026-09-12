@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { weekStreak } from "@/lib/week";
 
 export type ProgressPoint = {
   workoutId: string;
@@ -27,15 +28,6 @@ export type ProgressSummary = {
 /** Epley estimate; only meaningful for 1–12 reps. */
 function epley(weight: number, reps: number): number {
   return reps === 1 ? weight : weight * (1 + reps / 30);
-}
-
-function isoWeekKey(d: Date): string {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return `${date.getUTCFullYear()}-${week}`;
 }
 
 export async function getProgress(clientId: string): Promise<ProgressSummary> {
@@ -107,15 +99,7 @@ export async function getProgress(clientId: string): Promise<ProgressSummary> {
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   }).length;
 
-  // consecutive ISO weeks with a workout, counting back from this week (or last week if this one is empty so far)
-  const weeks = new Set(list.map((w) => isoWeekKey(new Date(w.performed_at))));
-  let streakWeeks = 0;
-  const cursor = new Date(now);
-  if (!weeks.has(isoWeekKey(cursor))) cursor.setDate(cursor.getDate() - 7);
-  while (weeks.has(isoWeekKey(cursor))) {
-    streakWeeks += 1;
-    cursor.setDate(cursor.getDate() - 7);
-  }
+  const streakWeeks = weekStreak(list.map((w) => w.performed_at), now);
 
   return { exercises, totalWorkouts: list.length, workoutsThisMonth, streakWeeks };
 }

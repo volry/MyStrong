@@ -29,7 +29,7 @@ export default async function EditWorkoutPage({ params }: { params: Promise<{ id
   const { data: items } = await supabase
     .from("program_exercises")
     .select(
-      "id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes, exercise:exercises(id, name, youtube_url, description)",
+      "id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes, exercise:exercises(id, name, youtube_url, description, muscle_group)",
     )
     .eq("program_day_id", w.program_day_id)
     .order("position");
