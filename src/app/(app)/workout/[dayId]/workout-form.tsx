@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type FocusEvent } from "react";
 import { BarChart3, Check, MessageSquare, Plus } from "lucide-react";
 import { makeT, type Locale, type TranslationKey } from "@/i18n/dictionaries";
 
@@ -57,6 +57,16 @@ function buildRows(items: WorkoutItem[], previous: Record<string, PrevSet[]>, un
     });
   }
   return rows;
+}
+
+/**
+ * Set cells come prefilled with last time's numbers. Tapping one selects what is
+ * there, so typing replaces it instead of appending to it — no clearing first.
+ * The selection is made after the focus event settles, which iOS needs.
+ */
+function selectOnFocus(event: FocusEvent<HTMLInputElement>) {
+  const input = event.currentTarget;
+  requestAnimationFrame(() => input.select());
 }
 
 function parseNum(s: string): number | null {
@@ -402,6 +412,7 @@ export function WorkoutForm(props: Props) {
                     min={0}
                     value={row.weight}
                     onChange={(e) => updateRow(item.id, i, { weight: e.target.value })}
+                    onFocus={selectOnFocus}
                     className={cn(inputClass, row.done && "bg-primary/10")}
                     aria-label={`${t("workout.set")} ${i + 1} ${t("workout.weight")}`}
                   />
@@ -413,6 +424,7 @@ export function WorkoutForm(props: Props) {
                     onChange={(e) =>
                       updateRow(item.id, i, timeMode ? { time: e.target.value } : { reps: e.target.value })
                     }
+                    onFocus={selectOnFocus}
                     className={cn(inputClass, row.done && "bg-primary/10")}
                     aria-label={`${t("workout.set")} ${i + 1} ${timeMode ? t("workout.time") : t("workout.reps")}`}
                   />
