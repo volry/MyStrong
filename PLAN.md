@@ -310,3 +310,43 @@ forms stay correct at every number.
 
 Checked in Chromium at 390px on the temporary preview route: filters, search,
 metric switch, "Show more", and the no-weight card.
+
+## Achievements (2026-09-13)
+
+Badges for what the log already proves: consistency, records, volume, and
+getting through a program. Nothing is stored — `replayAchievements` walks the
+finished workouts oldest-first and replays the counters, so every badge also
+carries the date it was earned and the workout that earned it. A corrected or
+deleted workout corrects the badges with it, and there is no table to drift.
+
+Twenty-eight badges in four families:
+
+- **Consistency** — first workout, 10 / 25 / 50 / 100 workouts, and 2 / 4 / 8 /
+  12 / 26 weeks in a row (the longest run ever, not the current one).
+- **Records** — 1 / 10 / 25 personal records (beating your own best weight in an
+  exercise; a first session is not a record), and 60 / 80 / 100 kg in one set.
+- **Volume** — 10 / 50 / 100 t lifted in total, and 5 / 10 t in a single workout.
+- **Program and variety** — 10 / 25 / 50 different exercises, 4 muscle groups and
+  then the whole body inside one week, 4 full program weeks, a program finished.
+
+Thresholds are picked so the Ukrainian names stay grammatical at every number,
+and the running totals read "Тренувань: 34" for the same reason.
+
+Where they show up:
+
+- A strip on **Progress**: earned badges, the count, and the closest locked one
+  with a bar. It links to `/achievements`; the coach sees the same strip on a
+  client's progress page, without the link.
+- **`/achievements`** lists all four families as ladders — earned ones show their
+  date, locked ones their progress.
+- **After a workout**: `finishWorkout` checks what that workout unlocked and, if
+  anything did, lands on `/achievements?new=<id>` with a card naming it instead
+  of dropping back on Today. Nothing unlocked means the old redirect, so ordinary
+  days cost no extra tap.
+
+`replayAchievements` is pure and was checked against handmade logs: streaks
+surviving a gap, two workouts in one week counting once, a first session not
+counting as a record, volume totals, muscle groups adding up across a week,
+program weeks not counting twice when a day is repeated, and an empty log.
+
+Checked in Chromium at 390px: the strip, the full list, and the post-workout card.

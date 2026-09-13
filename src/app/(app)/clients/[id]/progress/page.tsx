@@ -6,7 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
 import { getProgress } from "@/lib/progress";
+import { getAchievements } from "@/lib/achievements";
 import { ProgressView } from "@/components/progress-view";
+import { AchievementStrip } from "@/components/achievements";
 
 export default async function ClientProgressPage({ params }: { params: Promise<{ id: string }> }) {
   const coach = await requireCoach();
@@ -22,7 +24,10 @@ export default async function ClientProgressPage({ params }: { params: Promise<{
     .maybeSingle();
   if (!client || (client.role !== "client" && client.id !== coach.id)) notFound();
 
-  const summary = await getProgress(client.id);
+  const [summary, achievements] = await Promise.all([
+    getProgress(client.id),
+    getAchievements(client.id),
+  ]);
 
   return (
     <div className="space-y-4">
@@ -33,6 +38,7 @@ export default async function ClientProgressPage({ params }: { params: Promise<{
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">{t("progress.title")}</h1>
       </div>
+      <AchievementStrip achievements={achievements} t={t} unit={coach.unit} locale={locale} />
       <ProgressView summary={summary} unit={coach.unit} locale={locale} />
     </div>
   );
