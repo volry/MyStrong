@@ -6,15 +6,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
 import { formatTarget } from "@/lib/format";
-import { muscleLabel } from "@/lib/muscles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
 import { TargetFields } from "@/components/target-fields";
+import { MuscleBadge } from "@/components/muscle-badges";
 import {
   addMyProgramExercise,
   deleteMyDay,
@@ -113,9 +112,7 @@ export default async function MyDayPage({
                         {i + 1}. {pe.exercise?.name}
                       </CardTitle>
                       <div className="flex flex-wrap items-center gap-2">
-                        {muscleLabel(t, pe.exercise?.muscle_group) && (
-                          <Badge variant="secondary">{muscleLabel(t, pe.exercise?.muscle_group)}</Badge>
-                        )}
+                        <MuscleBadge group={pe.exercise?.muscle_group} t={t} />
                         <p className="text-sm text-muted-foreground">{formatTarget(pe)}</p>
                       </div>
                     </div>

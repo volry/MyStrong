@@ -5,11 +5,11 @@ import { getProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT, MUSCLE_GROUPS } from "@/i18n/dictionaries";
-import { isMuscleGroup, muscleLabel } from "@/lib/muscles";
+import { isMuscleGroup } from "@/lib/muscles";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { MuscleBadge } from "@/components/muscle-badges";
 
 export default async function ExercisesPage({
   searchParams,
@@ -91,11 +91,9 @@ export default async function ExercisesPage({
                 <Link href={`/exercises/${e.id}`} className="flex items-center gap-3 px-4 py-3">
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">{e.name}</div>
-                    {muscleLabel(t, e.muscle_group) && (
-                      <Badge variant="secondary" className="mt-1">
-                        {muscleLabel(t, e.muscle_group)}
-                      </Badge>
-                    )}
+                    <div className="mt-1">
+                      <MuscleBadge group={e.muscle_group} t={t} />
+                    </div>
                   </div>
                   {e.youtube_url && <Video className="size-4 text-muted-foreground" />}
                   <ChevronRight className="size-4 text-muted-foreground" />

@@ -20,3 +20,23 @@ export function muscleSummary(rows: { exercise: { muscle_group: string | null } 
     .sort((a, b) => b[1] - a[1] || MUSCLE_GROUPS.indexOf(a[0]) - MUSCLE_GROUPS.indexOf(b[0]))
     .map(([g]) => g);
 }
+
+/**
+ * A tint per muscle group, so a day's badges read at a glance. Hues are spread so
+ * that groups which usually share a day (chest / shoulders / arms / core, or
+ * legs / glutes / core) never land on neighbouring colours; teal is left alone
+ * because it is the app's own accent. Warm-ups and "other" stay neutral — they
+ * are not a muscle group. Class strings are literal so Tailwind keeps them.
+ */
+export const MUSCLE_BADGE: Record<MuscleGroup, string> = {
+  chest: "bg-rose-100 text-rose-800",
+  back: "bg-blue-100 text-blue-800",
+  shoulders: "bg-amber-100 text-amber-900",
+  arms: "bg-violet-100 text-violet-800",
+  legs: "bg-green-100 text-green-800",
+  glutes: "bg-fuchsia-100 text-fuchsia-800",
+  core: "bg-sky-100 text-sky-800",
+  cardio: "bg-orange-100 text-orange-800",
+  fullbody: "bg-stone-200 text-stone-700",
+  other: "bg-stone-200 text-stone-700",
+};
