@@ -11,8 +11,26 @@ export type ProgramDay = {
   /** How much work the day holds, for previews. */
   exercises: number;
   sets: number;
+  /** Rough length of the session, minutes. */
+  minutes: number;
   muscles: MuscleGroup[];
 };
+
+/**
+ * A weighted set is about two and a half minutes with its rest; a timed one costs
+ * its own duration plus a short break. Warm-ups and cardio are timed, so counting
+ * them as plain sets would hide a 15-minute walk behind "3 min".
+ */
+function estimateMinutes(
+  rows: { target_sets: number | null; target_time_sec: number | null }[],
+): number {
+  const minutes = rows.reduce((total, pe) => {
+    const sets = pe.target_sets ?? 1;
+    const perSet = pe.target_time_sec != null ? pe.target_time_sec / 60 + 0.5 : 2.5;
+    return total + sets * perSet;
+  }, 0);
+  return Math.round(minutes / 5) * 5;
+}
 
 /** The client's active program with its days, which days are done, and the next day to do. */
 export async function getActiveProgram(clientId: string) {
@@ -22,7 +40,7 @@ export async function getActiveProgram(clientId: string) {
     supabase
       .from("programs")
       .select(
-        "id, name, start_date, notes, created_by, review_status, program_days(id, week_no, day_no, title, program_exercises(target_sets, exercise:exercises(muscle_group)))",
+        "id, name, start_date, notes, created_by, review_status, program_days(id, week_no, day_no, title, program_exercises(target_sets, target_time_sec, exercise:exercises(muscle_group)))",
       )
       .eq("client_id", clientId)
       .eq("is_active", true)
@@ -55,6 +73,7 @@ export async function getActiveProgram(clientId: string) {
     title: d.title,
     exercises: d.program_exercises.length,
     sets: d.program_exercises.reduce((n, pe) => n + (pe.target_sets ?? 0), 0),
+    minutes: estimateMinutes(d.program_exercises),
     muscles: muscleSummary(d.program_exercises),
   }));
 

@@ -10,11 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MuscleBadges } from "@/components/muscle-badges";
 
-/** Rough session length: a working set plus rest is about three minutes. */
-function estimateMinutes(sets: number): number {
-  return Math.max(5, Math.round((sets * 3) / 5) * 5);
-}
-
 /** "Today" view: next workout of the active program. Used by clients at `/` and by the coach at `/me`. */
 export async function ClientHome({
   locale,
@@ -213,7 +208,7 @@ function NextWorkout({
         <p className="text-sm text-muted-foreground">
           {t("prog.exercises", { n: day.exercises })}
           {day.sets > 0 && ` · ${t("today.sets", { n: day.sets })}`}
-          {day.sets > 0 && ` · ${t("today.approxMin", { n: estimateMinutes(day.sets) })}`}
+          {day.minutes > 0 && ` · ${t("today.approxMin", { n: day.minutes })}`}
         </p>
       </CardHeader>
 
