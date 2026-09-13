@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { Check, MessageSquare, Plus } from "lucide-react";
 import { makeT, type Locale, type TranslationKey } from "@/i18n/dictionaries";
-import { muscleLabel } from "@/lib/muscles";
+
 import { formatTarget } from "@/lib/format";
 import { formatWeight, unitToKg, type Unit } from "@/lib/units";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { MuscleBadge } from "@/components/muscle-badges";
 import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
 import { finishWorkout, skipDay, updateWorkout, type NoteInput, type SetInput } from "../actions";
@@ -283,9 +283,7 @@ export function WorkoutForm(props: Props) {
                 {idx + 1}. {item.exercise?.name}
               </CardTitle>
               <div className="flex flex-wrap items-center gap-2">
-                {muscleLabel(t, item.exercise?.muscle_group) && (
-                  <Badge variant="secondary">{muscleLabel(t, item.exercise?.muscle_group)}</Badge>
-                )}
+                <MuscleBadge group={item.exercise?.muscle_group} t={t} />
                 <p className="text-sm text-muted-foreground">
                   {t("workout.target")}: {formatTarget(item) || "—"}
                 </p>

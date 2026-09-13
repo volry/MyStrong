@@ -2,8 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { getProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
-import { makeT, MUSCLE_GROUPS, type MuscleGroup } from "@/i18n/dictionaries";
-import { Badge } from "@/components/ui/badge";
+import { makeT } from "@/i18n/dictionaries";
+import { MuscleBadge } from "@/components/muscle-badges";
 import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
 import { ExerciseForm } from "../exercise-form";
@@ -33,16 +33,11 @@ export default async function EditExercisePage({
 
   // A client may change only the exercises they added themselves.
   const mayEdit = profile.role === "coach" || exercise.created_by === profile.id;
-  const muscle =
-    exercise.muscle_group && (MUSCLE_GROUPS as readonly string[]).includes(exercise.muscle_group)
-      ? t(`muscle.${exercise.muscle_group as MuscleGroup}`)
-      : null;
-
   if (!mayEdit) {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold tracking-tight">{exercise.name}</h1>
-        {muscle && <Badge variant="secondary">{muscle}</Badge>}
+        <MuscleBadge group={exercise.muscle_group} t={t} />
         <YoutubeEmbed url={exercise.youtube_url} title={exercise.name} />
         {exercise.description && <p className="whitespace-pre-wrap text-sm">{exercise.description}</p>}
         <p className="text-sm text-muted-foreground">{t("ex.notYours")}</p>
