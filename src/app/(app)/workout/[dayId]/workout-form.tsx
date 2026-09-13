@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { Check, MessageSquare, Plus } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { BarChart3, Check, MessageSquare, Plus } from "lucide-react";
 import { makeT, type Locale, type TranslationKey } from "@/i18n/dictionaries";
 
 import { formatTarget } from "@/lib/format";
@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MuscleBadge } from "@/components/muscle-badges";
+import { RestTimer, type RestTimerHandle } from "@/components/rest-timer";
+import { ExerciseSheet, type SheetTab } from "@/components/exercise-sheet";
+import type { ExerciseStats } from "@/lib/exercise-stats";
 import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
 import { finishWorkout, skipDay, updateWorkout, type NoteInput, type SetInput } from "../actions";
@@ -89,6 +92,10 @@ type Props = {
   items: WorkoutItem[];
   previous: Record<string, PrevSet[]>;
   canLog: boolean;
+  /** Rest countdown after each ticked set, seconds. 0 = the client turned it off. */
+  restTimerSec?: number;
+  /** History and records per exercise id, for the exercise sheet. */
+  stats?: Record<string, ExerciseStats>;
   /** Coach logging for a client: the workout is saved under this client. */
   clientId?: string;
 } & (
@@ -104,7 +111,7 @@ type Props = {
 );
 
 export function WorkoutForm(props: Props) {
-  const { locale, unit, dayId, items, previous, canLog, clientId } = props;
+  const { locale, unit, dayId, items, previous, canLog, clientId, restTimerSec = 0, stats } = props;
   const isEdit = props.mode === "edit";
   const t = makeT(locale);
   const draftKey = `mystrong:draft:${dayId}:${clientId ?? "me"}`;
@@ -124,6 +131,8 @@ export function WorkoutForm(props: Props) {
   const [error, setError] = useState<TranslationKey | null>(null);
   const [pending, startTransition] = useTransition();
   const [hydrated, setHydrated] = useState(false);
+  const restRef = useRef<RestTimerHandle | null>(null);
+  const [sheet, setSheet] = useState<{ itemId: string; tab: SheetTab } | null>(null);
 
   // After mount: restore an unfinished draft (log mode) or compute the local date (edit mode).
   // localStorage and the local timezone are only available in the browser, hence an effect.
@@ -173,6 +182,12 @@ export function WorkoutForm(props: Props) {
       ...r,
       [itemId]: r[itemId].map((row, i) => (i === index ? { ...row, ...patch } : row)),
     }));
+  }
+
+  /** Ticking a set (never un-ticking) starts the rest countdown, when it is on. */
+  function toggleDone(itemId: string, index: number, done: boolean) {
+    updateRow(itemId, index, { done });
+    if (done && restTimerSec > 0 && !isEdit) restRef.current?.start(restTimerSec);
   }
 
   function addRow(itemId: string) {
@@ -244,6 +259,8 @@ export function WorkoutForm(props: Props) {
     });
   }
 
+  const sheetExercise = sheet ? (items.find((i) => i.id === sheet.itemId)?.exercise ?? null) : null;
+
   const inputClass =
     "h-11 w-full rounded-lg border border-input bg-background px-1 text-center text-base tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   const gridCols = isEdit
@@ -279,9 +296,26 @@ export function WorkoutForm(props: Props) {
         return (
           <Card key={item.id}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">
-                {idx + 1}. {item.exercise?.name}
-              </CardTitle>
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="text-base">
+                  <button
+                    type="button"
+                    onClick={() => item.exercise && setSheet({ itemId: item.id, tab: "about" })}
+                    className="text-left text-primary underline-offset-4 hover:underline"
+                  >
+                    {idx + 1}. {item.exercise?.name}
+                  </button>
+                </CardTitle>
+                <button
+                  type="button"
+                  onClick={() => item.exercise && setSheet({ itemId: item.id, tab: "charts" })}
+                  aria-label={t("ex.stats")}
+                  title={t("ex.stats")}
+                  className="flex size-9 shrink-0 items-center justify-center rounded-lg border text-muted-foreground"
+                >
+                  <BarChart3 className="size-4" />
+                </button>
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <MuscleBadge group={item.exercise?.muscle_group} t={t} />
                 <p className="text-sm text-muted-foreground">
@@ -337,7 +371,7 @@ export function WorkoutForm(props: Props) {
                   />
                   <button
                     type="button"
-                    onClick={() => updateRow(item.id, i, { done: !row.done })}
+                    onClick={() => toggleDone(item.id, i, !row.done)}
                     aria-pressed={row.done}
                     className={cn(
                       "flex h-11 w-11 items-center justify-center rounded-lg border transition-colors",
@@ -434,6 +468,23 @@ export function WorkoutForm(props: Props) {
             </form>
           )}
         </>
+      )}
+
+      {restTimerSec > 0 && !isEdit && (
+        <RestTimer t={t} onReady={(handle) => (restRef.current = handle)} />
+      )}
+
+      {sheetExercise && (
+        <ExerciseSheet
+          exercise={sheetExercise}
+          stats={stats?.[sheetExercise.id]}
+          unit={unit}
+          locale={locale}
+          tab={sheet?.tab ?? "about"}
+          onTabChange={(tab) => setSheet((s) => (s ? { ...s, tab } : s))}
+          open={sheet != null}
+          onOpenChange={(open) => !open && setSheet(null)}
+        />
       )}
     </div>
   );

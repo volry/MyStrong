@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/profile";
 import { getRequestLocale } from "@/i18n/server";
 import { LOCALES, makeT } from "@/i18n/dictionaries";
+import { REST_TIMER_CHOICES, formatClock } from "@/lib/rest-timer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,6 +47,23 @@ export default async function SettingsPage({
             <option value="kg">kg</option>
             <option value="lb">lb</option>
           </select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="rest_timer_sec">{t("settings.restTimer")}</Label>
+          <select
+            id="rest_timer_sec"
+            name="rest_timer_sec"
+            defaultValue={profile.rest_timer_sec}
+            className={selectClass}
+          >
+            {REST_TIMER_CHOICES.map((sec) => (
+              <option key={sec} value={sec}>
+                {sec === 0 ? t("settings.restTimerOff") : formatClock(sec)}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">{t("settings.restTimerHint")}</p>
         </div>
 
         <div className="space-y-2">

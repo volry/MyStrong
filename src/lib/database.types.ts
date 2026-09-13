@@ -145,6 +145,7 @@ export type Database = {
           full_name: string | null
           id: string
           locale: string
+          rest_timer_sec: number
           role: Database["public"]["Enums"]["user_role"]
           unit: Database["public"]["Enums"]["weight_unit"]
         }
@@ -154,6 +155,7 @@ export type Database = {
           full_name?: string | null
           id: string
           locale?: string
+          rest_timer_sec?: number
           role?: Database["public"]["Enums"]["user_role"]
           unit?: Database["public"]["Enums"]["weight_unit"]
         }
@@ -163,6 +165,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           locale?: string
+          rest_timer_sec?: number
           role?: Database["public"]["Enums"]["user_role"]
           unit?: Database["public"]["Enums"]["weight_unit"]
         }

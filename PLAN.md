@@ -235,3 +235,28 @@ a Base UI console error that fired on most screens.
 Design checked in Chromium at 390px through a temporary preview route (the
 container's proxy blocks Supabase, so the real data path could not be run
 locally).
+
+## Rest timer and the exercise sheet (2026-09-13)
+
+Two things the owner missed from Strong.
+
+**Rest timer.** `profiles.rest_timer_sec` (0 = off, otherwise 60–180 s, chosen in
+Settings; the column grant list now includes it). Ticking a set starts a
+countdown pinned above the tab bar with −15 s / +15 s / skip; at zero it beeps
+(WebAudio primed on the tick, so iOS allows it) and vibrates where supported. It
+never blocks the form, and stays off for anyone who does not turn it on.
+
+**Exercise sheet.** Tapping an exercise name in a workout — or the chart button
+on the right of the card — opens a bottom sheet (Base UI Dialog) with four tabs:
+About (video and cues), History (every past session with its sets), Charts (best
+set and volume over time), Records (best set, est. 1RM, best volume, most reps,
+longest hold, totals). `getExerciseStats` fetches all of it for the day's
+exercises in one query while the page renders, so opening the sheet costs no
+round trip and survives a flaky gym connection.
+
+`TrendChart` (`src/components/trend-chart.tsx`) is the small one-series chart the
+sheet uses, in the same validated colours as the progress screen.
+
+Checked in Chromium at 390px: ticking a set starts the countdown, and all four
+tabs render (temporary preview route with fixed data — the container's proxy
+blocks Supabase, so the real data path cannot run locally).
