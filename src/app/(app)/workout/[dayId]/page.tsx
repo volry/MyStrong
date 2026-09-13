@@ -7,6 +7,7 @@ import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
 import { formatDate } from "@/lib/format";
 import { muscleSummary } from "@/lib/muscles";
+import { getExerciseStats } from "@/lib/exercise-stats";
 import { MuscleBadges } from "@/components/muscle-badges";
 import { WorkoutForm, type PrevSet, type WorkoutItem } from "./workout-form";
 
@@ -100,6 +101,12 @@ export default async function WorkoutPage({
     exercise: i.exercise,
   }));
 
+  // History and records for the day's exercises, so the sheet opens instantly.
+  const stats = await getExerciseStats(
+    owner.id,
+    workoutItems.map((i) => i.exercise?.id).filter((id): id is string => Boolean(id)),
+  );
+
   const backHref = forClient ? `/clients/${owner.id}` : profile.role === "coach" ? "/me" : "/";
 
   return (
@@ -137,6 +144,8 @@ export default async function WorkoutPage({
         previous={previous}
         canLog
         clientId={forClient ? owner.id : undefined}
+        restTimerSec={profile.rest_timer_sec}
+        stats={stats}
       />
     </div>
   );

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
 import { formatDate } from "@/lib/format";
+import { getExerciseStats } from "@/lib/exercise-stats";
 import { WorkoutForm } from "../../../workout/[dayId]/workout-form";
 import { rowsFromSets, type PrevSet, type WorkoutItem } from "@/lib/workout-rows";
 
@@ -55,6 +56,11 @@ export default async function EditWorkoutPage({ params }: { params: Promise<{ id
     });
   }
 
+  const stats = await getExerciseStats(
+    w.client_id,
+    workoutItems.map((i) => i.exercise?.id).filter((id): id is string => Boolean(id)),
+  );
+
   return (
     <div className="space-y-4">
       <div>
@@ -73,6 +79,7 @@ export default async function EditWorkoutPage({ params }: { params: Promise<{ id
 
       <WorkoutForm
         mode="edit"
+        stats={stats}
         locale={locale}
         unit={profile.unit}
         dayId={w.program_day_id}

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
 import { isLocale } from "@/i18n/dictionaries";
 import { LOCALE_COOKIE } from "@/i18n/server";
+import { REST_TIMER_CHOICES } from "@/lib/rest-timer";
 
 export async function inviteClient(formData: FormData) {
   const profile = await getProfile();
@@ -67,11 +68,13 @@ export async function updateProfile(formData: FormData) {
   const unit = formData.get("unit") === "lb" ? "lb" : "kg";
   const localeRaw = formData.get("locale");
   const locale = isLocale(localeRaw) ? localeRaw : "en";
+  const rest = Number(formData.get("rest_timer_sec"));
+  const restTimerSec = (REST_TIMER_CHOICES as readonly number[]).includes(rest) ? rest : 0;
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name: fullName || null, unit, locale })
+    .update({ full_name: fullName || null, unit, locale, rest_timer_sec: restTimerSec })
     .eq("id", profile.id);
 
   if (!error) {
