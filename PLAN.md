@@ -278,3 +278,35 @@ with today's value, and a tick on the chosen one.
 - Timed exercises (planks, cardio) have no focus line — volume and reps say
   nothing there.
 - Tapping the exercise name still opens the full sheet, unchanged.
+
+## Progress screen: a list, not a dropdown (2026-09-13)
+
+Progress used to hide every exercise behind a `<select>`: one chart at a time,
+and no way to see what else is there. It is now a scrollable list of cards —
+name, muscle badge, how many workouts and when the last one was, best set and
+estimated 1RM, and one chart — so scrolling down walks through the whole log.
+
+Filters keep the list short:
+
+- **Search** by name.
+- **Muscle group** chips, offering only the groups actually trained.
+- **Chart** switch (best set / volume / est. 1RM) — it changes every card at
+  once, so exercises stay comparable, and the line explaining volume or 1RM
+  shows only when that measure is on.
+- **Sort** (recent / A–Z / most trained) and a **2+ workouts** filter that hides
+  one-off exercises.
+
+Six cards render at a time behind a "Show more" button: each card is a Recharts
+chart, and a phone should not mount thirty of them to show three. Any filter
+change resets the list to the top of the page.
+
+`getProgress` now returns each exercise's muscle group and the date it was last
+trained, and sorts by recency instead of session count — the default order the
+list wants.
+
+Exercises logged without weight (planks, cardio) say so instead of drawing an
+empty chart. Counts read "Workouts: 3" / "Тренувань: 3" so Ukrainian plural
+forms stay correct at every number.
+
+Checked in Chromium at 390px on the temporary preview route: filters, search,
+metric switch, "Show more", and the no-weight card.
