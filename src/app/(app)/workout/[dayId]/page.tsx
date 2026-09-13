@@ -8,6 +8,7 @@ import { makeT } from "@/i18n/dictionaries";
 import { formatDate } from "@/lib/format";
 import { muscleSummary } from "@/lib/muscles";
 import { getExerciseStats } from "@/lib/exercise-stats";
+import { isFocusMetric, type FocusMetric } from "@/lib/focus-metric";
 import { MuscleBadges } from "@/components/muscle-badges";
 import { WorkoutForm, type PrevSet, type WorkoutItem } from "./workout-form";
 
@@ -101,11 +102,23 @@ export default async function WorkoutPage({
     exercise: i.exercise,
   }));
 
-  // History and records for the day's exercises, so the sheet opens instantly.
-  const stats = await getExerciseStats(
-    owner.id,
-    workoutItems.map((i) => i.exercise?.id).filter((id): id is string => Boolean(id)),
-  );
+  // History, records and the chosen focus metric for the day's exercises, so the
+  // sheet and the picker open instantly.
+  const exerciseIds = workoutItems
+    .map((i) => i.exercise?.id)
+    .filter((id): id is string => Boolean(id));
+  const [stats, { data: focusRows }] = await Promise.all([
+    getExerciseStats(owner.id, exerciseIds),
+    supabase
+      .from("exercise_focus")
+      .select("exercise_id, metric")
+      .eq("user_id", owner.id)
+      .in("exercise_id", exerciseIds.length > 0 ? exerciseIds : ["00000000-0000-0000-0000-000000000000"]),
+  ]);
+  const focus: Record<string, FocusMetric> = {};
+  for (const row of focusRows ?? []) {
+    if (isFocusMetric(row.metric)) focus[row.exercise_id] = row.metric;
+  }
 
   const backHref = forClient ? `/clients/${owner.id}` : profile.role === "coach" ? "/me" : "/";
 
@@ -146,6 +159,7 @@ export default async function WorkoutPage({
         clientId={forClient ? owner.id : undefined}
         restTimerSec={profile.rest_timer_sec}
         stats={stats}
+        focus={focus}
       />
     </div>
   );

@@ -328,6 +328,14 @@ const en = {
   "ex.stats": "Stats",
   "ex.close": "Close",
   "ex.sessionSets": "{n} sets",
+  "focus.title": "What to watch",
+  "focus.hint": "Counted from the sets you tick today. Volume increase compares with the last time you did this exercise.",
+  "focus.volume": "Total volume",
+  "focus.volumeChange": "Volume increase",
+  "focus.reps": "Total reps",
+  "focus.topWeight": "Heaviest set",
+  "focus.valueReps": "{n} reps",
+  "focus.change": "Focus metric",
   "lang.uk": "Українська",
 } as const;
 
@@ -659,6 +667,14 @@ const uk: Record<TranslationKey, string> = {
   "ex.stats": "Показники",
   "ex.close": "Закрити",
   "ex.sessionSets": "Підходів: {n}",
+  "focus.title": "За чим стежити",
+  "focus.hint": "Рахується з підходів, які ви відмітили сьогодні. Приріст обсягу — порівняно з минулим разом.",
+  "focus.volume": "Загальний обсяг",
+  "focus.volumeChange": "Приріст обсягу",
+  "focus.reps": "Усього повторів",
+  "focus.topWeight": "Найбільша вага",
+  "focus.valueReps": "{n} повт.",
+  "focus.change": "Показник",
   "lang.uk": "Українська",
 };
 

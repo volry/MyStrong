@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile, type Profile } from "@/lib/profile";
 import { str } from "@/lib/form";
 import { coachIdsExcept, sendPushTo } from "@/lib/push";
+import { isFocusMetric } from "@/lib/focus-metric";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 export type SetInput = {
@@ -205,4 +206,27 @@ export async function deleteWorkout(formData: FormData) {
   const forClient = w && w.client_id !== profile.id;
   revalidateClientPages(forClient ? w.client_id : undefined);
   redirect(forClient ? `/clients/${w.client_id}` : "/history");
+}
+
+/**
+ * Remember which number the client watches for an exercise. Fire-and-forget from
+ * the workout screen: the choice applies at once and is saved in the background.
+ */
+export async function setFocusMetric(
+  exerciseId: string,
+  metric: string,
+  clientId?: string,
+): Promise<void> {
+  const profile = await getProfile();
+  if (!profile || !isFocusMetric(metric)) return;
+  // When the coach logs for a client, the choice belongs to that client.
+  const ownerId = resolveOwner(profile, clientId);
+
+  const supabase = await createClient();
+  await supabase
+    .from("exercise_focus")
+    .upsert(
+      { user_id: ownerId, exercise_id: exerciseId, metric, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,exercise_id" },
+    );
 }
