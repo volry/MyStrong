@@ -260,3 +260,21 @@ sheet uses, in the same validated colours as the progress screen.
 Checked in Chromium at 390px: ticking a set starts the countdown, and all four
 tabs render (temporary preview route with fixed data — the container's proxy
 blocks Supabase, so the real data path cannot run locally).
+
+## Focus metric picker (2026-09-13)
+
+The chart button on an exercise card used to open the same sheet as the exercise
+name, only on another tab — two doors to one room. It now opens a compact picker,
+the way Strong does it: the four numbers you can watch for that exercise, each
+with today's value, and a tick on the chosen one.
+
+- Metrics: total volume, volume increase against the last session, total reps,
+  heaviest set. Counted client-side from the sets ticked so far, so they move as
+  you train; the previous session's volume comes from the stats already loaded
+  for the sheet (converted into the display unit before the percentage).
+- The choice shows as a live line on the card and is stored per person per
+  exercise in `exercise_focus` (own rows only). It is saved in the background so
+  the tap feels instant, and under the client's id when the coach logs for them.
+- Timed exercises (planks, cardio) have no focus line — volume and reps say
+  nothing there.
+- Tapping the exercise name still opens the full sheet, unchanged.

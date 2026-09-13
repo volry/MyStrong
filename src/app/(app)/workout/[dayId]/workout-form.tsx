@@ -5,7 +5,7 @@ import { BarChart3, Check, MessageSquare, Plus } from "lucide-react";
 import { makeT, type Locale, type TranslationKey } from "@/i18n/dictionaries";
 
 import { formatTarget } from "@/lib/format";
-import { formatWeight, unitToKg, type Unit } from "@/lib/units";
+import { formatWeight, kgToUnit, unitToKg, type Unit } from "@/lib/units";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +15,11 @@ import { MuscleBadge } from "@/components/muscle-badges";
 import { RestTimer, type RestTimerHandle } from "@/components/rest-timer";
 import { ExerciseSheet, type SheetTab } from "@/components/exercise-sheet";
 import type { ExerciseStats } from "@/lib/exercise-stats";
+import { DEFAULT_FOCUS, FOCUS_LABEL, focusTotals, type FocusMetric } from "@/lib/focus-metric";
+import { FocusMetricPicker, formatFocus } from "@/components/focus-metric-picker";
 import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
-import { finishWorkout, skipDay, updateWorkout, type NoteInput, type SetInput } from "../actions";
+import { finishWorkout, setFocusMetric, skipDay, updateWorkout, type NoteInput, type SetInput } from "../actions";
 
 import type { PrevSet, Row, WorkoutItem } from "@/lib/workout-rows";
 export type { PrevSet, Row, WorkoutItem };
@@ -96,6 +98,8 @@ type Props = {
   restTimerSec?: number;
   /** History and records per exercise id, for the exercise sheet. */
   stats?: Record<string, ExerciseStats>;
+  /** The metric this client watches, per exercise id. */
+  focus?: Record<string, FocusMetric>;
   /** Coach logging for a client: the workout is saved under this client. */
   clientId?: string;
 } & (
@@ -111,7 +115,18 @@ type Props = {
 );
 
 export function WorkoutForm(props: Props) {
-  const { locale, unit, dayId, items, previous, canLog, clientId, restTimerSec = 0, stats } = props;
+  const {
+    locale,
+    unit,
+    dayId,
+    items,
+    previous,
+    canLog,
+    clientId,
+    restTimerSec = 0,
+    stats,
+    focus: savedFocus,
+  } = props;
   const isEdit = props.mode === "edit";
   const t = makeT(locale);
   const draftKey = `mystrong:draft:${dayId}:${clientId ?? "me"}`;
@@ -133,6 +148,8 @@ export function WorkoutForm(props: Props) {
   const [hydrated, setHydrated] = useState(false);
   const restRef = useRef<RestTimerHandle | null>(null);
   const [sheet, setSheet] = useState<{ itemId: string; tab: SheetTab } | null>(null);
+  const [focusPicker, setFocusPicker] = useState<string | null>(null);
+  const [focus, setFocus] = useState<Record<string, FocusMetric>>(savedFocus ?? {});
 
   // After mount: restore an unfinished draft (log mode) or compute the local date (edit mode).
   // localStorage and the local timezone are only available in the browser, hence an effect.
@@ -260,6 +277,24 @@ export function WorkoutForm(props: Props) {
   }
 
   const sheetExercise = sheet ? (items.find((i) => i.id === sheet.itemId)?.exercise ?? null) : null;
+  const pickerItem = focusPicker ? (items.find((i) => i.id === focusPicker) ?? null) : null;
+
+  /** The metric chosen for an exercise, falling back to total volume. */
+  function metricOf(itemId: string): FocusMetric {
+    const exerciseId = items.find((i) => i.id === itemId)?.exercise?.id;
+    return (exerciseId ? focus[exerciseId] : undefined) ?? DEFAULT_FOCUS;
+  }
+
+  /** Today's numbers for an exercise, from the sets ticked so far. */
+  function totalsOf(item: WorkoutItem) {
+    const ticked = (rows[item.id] ?? [])
+      .filter((row) => row.done)
+      .map((row) => ({ weight: parseNum(row.weight), reps: parseNum(row.reps) }));
+    // Last session's volume, converted into the unit the inputs use.
+    const last = item.exercise ? stats?.[item.exercise.id]?.sessions[0] : undefined;
+    const previousVolume = last && last.volume > 0 ? kgToUnit(last.volume, unit) : null;
+    return focusTotals(ticked, previousVolume);
+  }
 
   const inputClass =
     "h-11 w-full rounded-lg border border-input bg-background px-1 text-center text-base tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -308,9 +343,9 @@ export function WorkoutForm(props: Props) {
                 </CardTitle>
                 <button
                   type="button"
-                  onClick={() => item.exercise && setSheet({ itemId: item.id, tab: "charts" })}
-                  aria-label={t("ex.stats")}
-                  title={t("ex.stats")}
+                  onClick={() => item.exercise && setFocusPicker(item.id)}
+                  aria-label={t("focus.title")}
+                  title={t("focus.title")}
                   className="flex size-9 shrink-0 items-center justify-center rounded-lg border text-muted-foreground"
                 >
                   <BarChart3 className="size-4" />
@@ -322,6 +357,18 @@ export function WorkoutForm(props: Props) {
                   {t("workout.target")}: {formatTarget(item) || "—"}
                 </p>
               </div>
+              {item.exercise && !timeMode && (
+                <button
+                  type="button"
+                  onClick={() => setFocusPicker(item.id)}
+                  className="flex w-fit items-center gap-1.5 text-sm"
+                >
+                  <span className="text-muted-foreground">{t(FOCUS_LABEL[metricOf(item.id)])}:</span>
+                  <span className="font-semibold tabular-nums">
+                    {formatFocus(metricOf(item.id), totalsOf(item), t, unit)}
+                  </span>
+                </button>
+              )}
               {item.coach_notes && <p className="text-sm">{item.coach_notes}</p>}
               <YoutubeEmbed
                 url={item.exercise?.youtube_url}
@@ -472,6 +519,24 @@ export function WorkoutForm(props: Props) {
 
       {restTimerSec > 0 && !isEdit && (
         <RestTimer t={t} onReady={(handle) => (restRef.current = handle)} />
+      )}
+
+      {pickerItem?.exercise && (
+        <FocusMetricPicker
+          t={t}
+          exerciseName={pickerItem.exercise.name}
+          totals={totalsOf(pickerItem)}
+          unit={unit}
+          selected={metricOf(pickerItem.id)}
+          onSelect={(metric) => {
+            const exerciseId = pickerItem.exercise?.id;
+            if (!exerciseId) return;
+            setFocus((f) => ({ ...f, [exerciseId]: metric }));
+            void setFocusMetric(exerciseId, metric, clientId);
+          }}
+          open={focusPicker != null}
+          onOpenChange={(open) => !open && setFocusPicker(null)}
+        />
       )}
 
       {sheetExercise && (
