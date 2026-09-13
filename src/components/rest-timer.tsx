@@ -114,23 +114,22 @@ export function RestTimer({
   return (
     <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 px-4 md:bottom-4 md:left-56">
       <div className="mx-auto flex max-w-md items-center gap-2 rounded-xl border bg-card p-2 shadow-lg md:max-w-2xl">
-        <div className="relative h-11 flex-1 overflow-hidden rounded-lg bg-muted">
+        {/*
+          Amber, not the app's teal: the rest bar has to be spotted at a glance on a
+          screen that is already green. The text is dark in both states, so it stays
+          readable as the fill drains away from under it.
+        */}
+        <div className="relative h-11 flex-1 overflow-hidden rounded-lg bg-amber-100">
           <div
-            className={cn("absolute inset-y-0 left-0 transition-[width] duration-200", over ? "bg-primary/30" : "bg-primary")}
+            className={cn(
+              "absolute inset-y-0 left-0 transition-[width] duration-200",
+              over ? "bg-amber-200" : "bg-amber-400",
+            )}
             style={{ width: `${over ? 100 : percent}%` }}
           />
-          <div className="absolute inset-0 flex items-center justify-between px-3">
-            <span className={cn("text-sm font-medium", over ? "text-foreground" : "text-primary-foreground")}>
-              {over ? t("rest.over") : t("rest.title")}
-            </span>
-            <span
-              className={cn(
-                "text-base font-semibold tabular-nums",
-                over ? "text-foreground" : "text-primary-foreground",
-              )}
-            >
-              {formatClock(Math.max(0, left))}
-            </span>
+          <div className="absolute inset-0 flex items-center justify-between px-3 text-amber-950">
+            <span className="text-sm font-medium">{over ? t("rest.over") : t("rest.title")}</span>
+            <span className="text-base font-semibold tabular-nums">{formatClock(Math.max(0, left))}</span>
           </div>
         </div>
 
