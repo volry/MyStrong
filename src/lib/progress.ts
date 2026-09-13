@@ -13,9 +13,12 @@ export type ProgressPoint = {
 export type ExerciseProgress = {
   exerciseId: string;
   name: string;
+  muscleGroup: string | null;
   points: ProgressPoint[]; // oldest first
   bestEver: number | null;
   e1rmBest: number | null;
+  /** When it was last trained, for sorting the progress list. */
+  lastDate: string | null;
 };
 
 export type ProgressSummary = {
@@ -42,18 +45,22 @@ export async function getProgress(clientId: string): Promise<ProgressSummary> {
     supabase
       .from("set_logs")
       .select(
-        "reps, weight, workout:workouts!inner(id, performed_at, client_id, status), program_exercise:program_exercises!inner(exercise_id, exercise:exercises(name))",
+        "reps, weight, workout:workouts!inner(id, performed_at, client_id, status), program_exercise:program_exercises!inner(exercise_id, exercise:exercises(name, muscle_group))",
       )
       .eq("workout.client_id", clientId)
       .eq("workout.status", "done"),
   ]);
 
   // exercise -> workout -> aggregate
-  const byExercise = new Map<string, { name: string; byWorkout: Map<string, ProgressPoint> }>();
+  const byExercise = new Map<
+    string,
+    { name: string; muscleGroup: string | null; byWorkout: Map<string, ProgressPoint> }
+  >();
   for (const s of sets ?? []) {
     const exId = s.program_exercise.exercise_id;
     const name = s.program_exercise.exercise?.name ?? "?";
-    const entry = byExercise.get(exId) ?? { name, byWorkout: new Map() };
+    const muscleGroup = s.program_exercise.exercise?.muscle_group ?? null;
+    const entry = byExercise.get(exId) ?? { name, muscleGroup, byWorkout: new Map() };
     const point = entry.byWorkout.get(s.workout.id) ?? {
       workoutId: s.workout.id,
       date: s.workout.performed_at,
@@ -88,9 +95,18 @@ export async function getProgress(clientId: string): Promise<ProgressSummary> {
         (m, p) => (p.e1rm != null && (m == null || p.e1rm > m) ? p.e1rm : m),
         null,
       );
-      return { exerciseId, name: e.name, points, bestEver, e1rmBest };
+      return {
+        exerciseId,
+        name: e.name,
+        muscleGroup: e.muscleGroup,
+        points,
+        bestEver,
+        e1rmBest,
+        lastDate: points[points.length - 1]?.date ?? null,
+      };
     })
-    .sort((a, b) => b.points.length - a.points.length || a.name.localeCompare(b.name));
+    // Most recently trained first: that is what a person looks for on this screen.
+    .sort((a, b) => (b.lastDate ?? "").localeCompare(a.lastDate ?? "") || a.name.localeCompare(b.name));
 
   const list = workouts ?? [];
   const now = new Date();

@@ -7,6 +7,7 @@ import { getProfile, type Profile } from "@/lib/profile";
 import { str } from "@/lib/form";
 import { coachIdsExcept, sendPushTo } from "@/lib/push";
 import { isFocusMetric } from "@/lib/focus-metric";
+import { getAchievements } from "@/lib/achievements";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 export type SetInput = {
@@ -65,6 +66,8 @@ function revalidateClientPages(clientId?: string) {
   revalidatePath("/me");
   revalidatePath("/program");
   revalidatePath("/history");
+  revalidatePath("/progress");
+  revalidatePath("/achievements");
   if (clientId) revalidatePath(`/clients/${clientId}`);
 }
 
@@ -123,6 +126,13 @@ export async function finishWorkout(input: FinishInput): Promise<{ error: Transl
   }
 
   revalidateClientPages(forClient ? ownerId : undefined);
+
+  // A finished workout can cross a milestone. When it does, say so instead of
+  // dropping the person back on Today as if nothing happened.
+  if (!forClient) {
+    const unlocked = (await getAchievements(ownerId)).filter((a) => a.unlockedBy === workout.id);
+    if (unlocked.length > 0) redirect(`/achievements?new=${workout.id}`);
+  }
   redirect(forClient ? `/clients/${ownerId}?done=1` : "/?done=1");
 }
 

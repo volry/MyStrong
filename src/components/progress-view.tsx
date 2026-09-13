@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -12,15 +12,25 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { makeT, type Locale } from "@/i18n/dictionaries";
+import { Search } from "lucide-react";
+import { makeT, MUSCLE_GROUPS, type Locale, type MuscleGroup, type T } from "@/i18n/dictionaries";
 import type { ExerciseProgress, ProgressSummary } from "@/lib/progress";
+import { isMuscleGroup } from "@/lib/muscles";
 import { formatWeight, kgToUnit, type Unit } from "@/lib/units";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { MuscleBadge } from "@/components/muscle-badges";
 
 // Series color validated with the dataviz palette checker (light surface).
 const SERIES = "#0d9488";
 const GRID = "#e5e5e5";
 const AXIS_TEXT = "#737373";
+
+/** How many exercise cards to render before "Show more" — each one is a chart. */
+const PAGE = 6;
+
+type Metric = "best" | "volume" | "e1rm";
+type Sort = "recent" | "name" | "most";
 
 function shortDate(iso: string, locale: Locale) {
   return new Date(iso).toLocaleDateString(locale === "uk" ? "uk-UA" : "en-GB", {
@@ -39,8 +49,39 @@ export function ProgressView({
   locale: Locale;
 }) {
   const t = makeT(locale);
-  const [selectedId, setSelectedId] = useState(summary.exercises[0]?.exerciseId ?? "");
-  const selected = summary.exercises.find((e) => e.exerciseId === selectedId);
+  const [query, setQuery] = useState("");
+  const [group, setGroup] = useState<MuscleGroup | null>(null);
+  const [metric, setMetric] = useState<Metric>("best");
+  const [sort, setSort] = useState<Sort>("recent");
+  const [repeatedOnly, setRepeatedOnly] = useState(false);
+  const [shown, setShown] = useState(PAGE);
+
+  // Only offer groups the person has actually trained.
+  const groups = useMemo(() => {
+    const present = new Set(summary.exercises.map((e) => e.muscleGroup).filter(isMuscleGroup));
+    return MUSCLE_GROUPS.filter((g) => present.has(g));
+  }, [summary.exercises]);
+
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const list = summary.exercises.filter((e) => {
+      if (group && e.muscleGroup !== group) return false;
+      if (repeatedOnly && e.points.length < 2) return false;
+      if (needle && !e.name.toLowerCase().includes(needle)) return false;
+      return true;
+    });
+    if (sort === "name") return [...list].sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === "most") return [...list].sort((a, b) => b.points.length - a.points.length);
+    return list; // already most-recent first from the query
+  }, [summary.exercises, query, group, repeatedOnly, sort]);
+
+  // Any filter change starts the list from the top again.
+  function change<V>(set: (v: V) => void) {
+    return (value: V) => {
+      set(value);
+      setShown(PAGE);
+    };
+  }
 
   return (
     <div className="space-y-4">
@@ -54,27 +95,155 @@ export function ProgressView({
         <p className="py-6 text-center text-muted-foreground">{t("progress.empty")}</p>
       ) : (
         <>
-          <div className="space-y-1">
-            <label htmlFor="exercise" className="text-sm font-medium">
-              {t("progress.pick")}
-            </label>
-            <select
-              id="exercise"
-              value={selectedId}
-              onChange={(e) => setSelectedId(e.target.value)}
-              className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base"
-            >
-              {summary.exercises.map((e) => (
-                <option key={e.exerciseId} value={e.exerciseId}>
-                  {e.name} ({e.points.length})
-                </option>
-              ))}
-            </select>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => change(setQuery)(e.target.value)}
+              placeholder={t("progress.search")}
+              className="h-11 pl-9 text-base"
+            />
           </div>
 
-          {selected && <ExerciseCharts exercise={selected} unit={unit} locale={locale} />}
+          {groups.length > 1 && (
+            <Scroller>
+              <Chip label={t("ex.allGroups")} active={!group} onClick={() => change(setGroup)(null)} />
+              {groups.map((g) => (
+                <Chip
+                  key={g}
+                  label={t(`muscle.${g}`)}
+                  active={group === g}
+                  onClick={() => change(setGroup)(group === g ? null : g)}
+                />
+              ))}
+            </Scroller>
+          )}
+
+          <Scroller>
+            <Segmented
+              label={t("progress.metric")}
+              value={metric}
+              onChange={change(setMetric)}
+              options={[
+                ["best", t("progress.bestEver")],
+                ["volume", t("progress.volume")],
+                ["e1rm", t("progress.e1rm")],
+              ]}
+            />
+          </Scroller>
+          {metric !== "best" && (
+            <p className="-mt-2 text-xs text-muted-foreground">
+              {metric === "volume" ? t("progress.volumeHint") : t("progress.e1rmHint")}
+            </p>
+          )}
+
+          <div className="flex items-center gap-2">
+            <select
+              aria-label={t("progress.sort")}
+              value={sort}
+              onChange={(e) => change(setSort)(e.target.value as Sort)}
+              className="h-9 shrink-0 rounded-full border border-border bg-background px-3 text-sm text-muted-foreground"
+            >
+              <option value="recent">{t("progress.sortRecent")}</option>
+              <option value="name">{t("progress.sortName")}</option>
+              <option value="most">{t("progress.sortMost")}</option>
+            </select>
+            <Chip
+              label={t("progress.repeatedOnly")}
+              active={repeatedOnly}
+              onClick={() => change(setRepeatedOnly)(!repeatedOnly)}
+            />
+          </div>
+
+          {filtered.length === 0 ? (
+            <p className="py-8 text-center text-muted-foreground">{t("progress.noMatch")}</p>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                {t("progress.count", { n: Math.min(shown, filtered.length), total: filtered.length })}
+              </p>
+              <ul className="space-y-3">
+                {filtered.slice(0, shown).map((e) => (
+                  <li key={e.exerciseId}>
+                    <ExerciseCard exercise={e} metric={metric} unit={unit} locale={locale} t={t} />
+                  </li>
+                ))}
+              </ul>
+              {shown < filtered.length && (
+                <button
+                  type="button"
+                  onClick={() => setShown((n) => n + PAGE)}
+                  className="h-11 w-full rounded-xl border text-sm font-medium"
+                >
+                  {t("progress.showMore")}
+                </button>
+              )}
+            </>
+          )}
         </>
       )}
+    </div>
+  );
+}
+
+/** A row of controls that can run off the edge of a phone screen. */
+function Scroller({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="-mx-4 overflow-x-auto px-4">
+      <div className="flex w-max items-center gap-2 pb-1">{children}</div>
+    </div>
+  );
+}
+
+function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "shrink-0 rounded-full border px-3 py-1.5 text-sm transition-colors",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-background text-muted-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
+function Segmented<V extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: V;
+  onChange: (v: V) => void;
+  options: [V, string][];
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="flex rounded-full border p-0.5" role="group">
+        {options.map(([v, text]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => onChange(v)}
+            aria-pressed={value === v}
+            className={cn(
+              "shrink-0 rounded-full px-3 py-1 text-sm transition-colors",
+              value === v ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+            )}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -89,65 +258,87 @@ function Tile({ label, value, sub }: { label: string; value: string; sub?: strin
   );
 }
 
-function ExerciseCharts({
+/** One exercise: its numbers, and the chosen measure over time. */
+function ExerciseCard({
   exercise,
+  metric,
   unit,
   locale,
+  t,
 }: {
   exercise: ExerciseProgress;
+  metric: Metric;
   unit: Unit;
   locale: Locale;
+  t: T;
 }) {
-  const t = makeT(locale);
   const data = exercise.points.map((p) => ({
-    date: p.date,
     label: shortDate(p.date, locale),
-    best: p.best != null ? Math.round(kgToUnit(p.best, unit) * 4) / 4 : null,
-    volume: Math.round(kgToUnit(p.volume, unit)),
     sets: p.sets,
+    value:
+      metric === "volume"
+        ? Math.round(kgToUnit(p.volume, unit))
+        : metric === "e1rm"
+          ? p.e1rm != null
+            ? Math.round(kgToUnit(p.e1rm, unit))
+            : null
+          : p.best != null
+            ? Math.round(kgToUnit(p.best, unit) * 4) / 4
+            : null,
   }));
+  const hasValues = data.some((d) => d.value != null);
+  const axis = { tick: { fontSize: 11, fill: AXIS_TEXT }, tickLine: false, axisLine: false } as const;
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2">
-        <Tile
-          label={t("progress.bestEver")}
-          value={exercise.bestEver != null ? `${formatWeight(exercise.bestEver, unit)} ${unit}` : "—"}
-        />
-        <Tile
-          label={t("progress.e1rm")}
-          value={exercise.e1rmBest != null ? `${formatWeight(exercise.e1rmBest, unit)} ${unit}` : "—"}
-          sub={t("progress.e1rmHint")}
-        />
+    <div className="rounded-xl border p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate font-medium">{exercise.name}</div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {t("progress.sessions", { n: exercise.points.length })}
+            {exercise.lastDate && ` · ${t("progress.lastTrained", { date: shortDate(exercise.lastDate, locale) })}`}
+          </p>
+        </div>
+        <MuscleBadge group={exercise.muscleGroup} t={t} />
       </div>
 
-      <Card>
-        <CardHeader className="pb-1">
-          <CardTitle className="text-sm font-medium">{t("progress.bestChart", { unit })}</CardTitle>
-        </CardHeader>
-        <CardContent className="pl-0">
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+      <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
+        <span>
+          {t("progress.bestEver")}:{" "}
+          <span className="font-medium tabular-nums text-foreground">
+            {exercise.bestEver != null ? `${formatWeight(exercise.bestEver, unit)} ${unit}` : "—"}
+          </span>
+        </span>
+        <span>
+          {t("progress.e1rm")}:{" "}
+          <span className="font-medium tabular-nums text-foreground">
+            {exercise.e1rmBest != null ? `${formatWeight(exercise.e1rmBest, unit)} ${unit}` : "—"}
+          </span>
+        </span>
+      </div>
+
+      {!hasValues ? (
+        <p className="py-6 text-center text-xs text-muted-foreground">{t("progress.noWeight")}</p>
+      ) : (
+        <div className="-ml-2 mt-2 h-40">
+          <ResponsiveContainer width="100%" height="100%">
+            {metric === "volume" ? (
+              <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
                 <CartesianGrid vertical={false} stroke={GRID} />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 11, fill: AXIS_TEXT }}
-                  tickLine={false}
-                  axisLine={false}
-                  minTickGap={24}
-                />
-                <YAxis
-                  width={36}
-                  tick={{ fontSize: 11, fill: AXIS_TEXT }}
-                  tickLine={false}
-                  axisLine={false}
-                  domain={["auto", "auto"]}
-                />
-                <Tooltip content={<PointTooltip unit={unit} valueKey="best" />} cursor={{ stroke: GRID }} />
+                <XAxis dataKey="label" minTickGap={24} {...axis} />
+                <YAxis width={44} {...axis} />
+                <Tooltip content={<PointTooltip unit={unit} t={t} />} cursor={{ fill: "#f5f5f5" }} />
+                <Bar dataKey="value" fill={SERIES} radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false} />
+              </BarChart>
+            ) : (
+              <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke={GRID} />
+                <XAxis dataKey="label" minTickGap={24} {...axis} />
+                <YAxis width={36} domain={["auto", "auto"]} {...axis} />
+                <Tooltip content={<PointTooltip unit={unit} t={t} />} cursor={{ stroke: GRID }} />
                 <Line
                   type="monotone"
-                  dataKey="best"
+                  dataKey="value"
                   stroke={SERIES}
                   strokeWidth={2}
                   dot={{ r: 4, fill: SERIES, strokeWidth: 0 }}
@@ -156,61 +347,34 @@ function ExerciseCharts({
                   isAnimationActive={false}
                 />
               </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-1">
-          <CardTitle className="text-sm font-medium">{t("progress.volumeChart", { unit })}</CardTitle>
-          <p className="text-xs text-muted-foreground">{t("progress.volumeHint")}</p>
-        </CardHeader>
-        <CardContent className="pl-0">
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }} barCategoryGap="30%">
-                <CartesianGrid vertical={false} stroke={GRID} />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 11, fill: AXIS_TEXT }}
-                  tickLine={false}
-                  axisLine={false}
-                  minTickGap={24}
-                />
-                <YAxis width={44} tick={{ fontSize: 11, fill: AXIS_TEXT }} tickLine={false} axisLine={false} />
-                <Tooltip content={<PointTooltip unit={unit} valueKey="volume" />} cursor={{ fill: "#f5f5f5" }} />
-                <Bar dataKey="volume" fill={SERIES} radius={[4, 4, 0, 0]} isAnimationActive={false} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+            )}
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
 
-type TooltipPayload = { payload?: { label: string; best: number | null; volume: number; sets: number } };
+type TooltipPayload = { payload?: { label: string; value: number | null; sets: number } };
 
 function PointTooltip({
   active,
   payload,
   unit,
-  valueKey,
+  t,
 }: {
   active?: boolean;
   payload?: TooltipPayload[];
   unit: Unit;
-  valueKey: "best" | "volume";
+  t: T;
 }) {
   const p = payload?.[0]?.payload;
   if (!active || !p) return null;
-  const value = valueKey === "best" ? p.best : p.volume;
   return (
     <div className="rounded-lg border bg-background px-3 py-2 text-sm shadow-md">
       <div className="text-muted-foreground">{p.label}</div>
       <div className="font-medium tabular-nums">
-        {value != null ? `${value} ${unit}` : "—"} · {p.sets} sets
+        {p.value != null ? `${p.value} ${unit}` : "—"} · {p.sets} {t("progress.setsShort")}
       </div>
     </div>
   );

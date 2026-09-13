@@ -17,3 +17,12 @@ export function formatWeight(kg: number | null | undefined, unit: Unit): string 
   const v = Math.round(kgToUnit(kg, unit) * 4) / 4;
   return String(v);
 }
+
+/** Big totals: tonnes in kg, thousands of pounds otherwise. */
+export function formatTonnage(kg: number, unit: Unit, locale: string): string {
+  if (unit === "kg") {
+    const t = Math.round(kg / 100) / 10;
+    return `${t} ${locale === "uk" ? "т" : "t"}`;
+  }
+  return `${Math.round(kgToUnit(kg, unit) / 1000)}k lb`;
+}
