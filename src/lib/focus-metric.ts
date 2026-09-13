@@ -4,7 +4,8 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 export const FOCUS_METRICS = ["volume", "volume_change", "reps", "top_weight"] as const;
 export type FocusMetric = (typeof FOCUS_METRICS)[number];
 
-export const DEFAULT_FOCUS: FocusMetric = "volume";
+/** Heaviest set: the number most people actually chase, and the easiest to read. */
+export const DEFAULT_FOCUS: FocusMetric = "top_weight";
 
 export const FOCUS_LABEL: Record<FocusMetric, TranslationKey> = {
   volume: "focus.volume",
