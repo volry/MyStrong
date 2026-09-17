@@ -310,7 +310,7 @@ export function WorkoutForm(props: Props) {
     "h-11 w-full rounded-lg border border-input bg-background px-1 text-center text-base tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   const gridCols = isEdit
     ? "grid-cols-[2rem_1fr_1fr_2.75rem]"
-    : "grid-cols-[2rem_3.75rem_1fr_1fr_2.75rem]";
+    : "grid-cols-[2rem_5rem_1fr_1fr_2.75rem]";
 
   return (
     <div className="space-y-4">

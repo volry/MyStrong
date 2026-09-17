@@ -350,3 +350,29 @@ counting as a record, volume totals, muscle groups adding up across a week,
 program weeks not counting twice when a day is repeated, and an empty log.
 
 Checked in Chromium at 390px: the strip, the full list, and the post-workout card.
+
+## Typography (2026-09-17)
+
+Two problems, one visible, one not:
+
+- `--font-sans` was defined as `var(--font-sans)` — a self-reference dating to the
+  first commit. It never resolved, so `font-sans` fell through to the browser
+  default and the whole app rendered in a **serif**, while the layout was loading
+  Geist for nothing. It now names `--font-geist-sans` with a system stack behind it.
+- The type scale was one step below what a phone held at arm's length in a gym
+  wants. Tailwind's `--text-*` variables are overridden once in `@theme`: xs 13,
+  sm 15, base 17, lg 19, xl 21, 2xl 26, with matching line heights, and `body`
+  set to 17px for text that carries no size class. Spacing is untouched — only
+  the type grows, so no screen re-flows.
+
+Geist is wider than the serif it replaced, which broke two places that were sized
+around the old metrics:
+
+- The tab bar's longest label ("Налаштування") no longer fit a fifth of the
+  screen. Labels are now `min(10px, 2.6vw)` with tight tracking — whole down to
+  360px, and truncation only as a last resort below that.
+- The workout grid's "previous" column (3.75rem) cut "102.5 × 12"; it is 5rem now,
+  which the weight and reps inputs can spare.
+
+Checked in Chromium at 390 / 360 / 320px: program list, workout grid, achievements
+strip and rows, tab bar — no horizontal overflow, no clipped labels.

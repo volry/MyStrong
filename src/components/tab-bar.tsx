@@ -35,16 +35,18 @@ export function TabBar({ items }: { items: TabItem[] }) {
             (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)) ||
             (item.also?.some((p) => pathname.startsWith(p)) ?? false);
           return (
-            <li key={item.href} className="flex-1">
+            <li key={item.href} className="min-w-0 flex-1">
               <Link
                 href={item.href}
                 className={cn(
-                  "flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
+                  // The longest label ("Налаштування") has to fit a fifth of the screen whole:
+                  // 10px on a 390px phone, scaling down with the viewport on narrower ones.
+                  "flex h-14 flex-col items-center justify-center gap-0.5 text-[min(10px,2.6vw)] font-medium tracking-[-0.03em]",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
                 <Icon className="size-5" strokeWidth={active ? 2.5 : 2} />
-                {item.label}
+                <span className="w-full truncate text-center">{item.label}</span>
               </Link>
             </li>
           );

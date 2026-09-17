@@ -94,7 +94,7 @@ export function AchievementRow({
     >
       <Face a={a} />
       <div className="min-w-0 flex-1">
-        <div className={cn("truncate font-medium", !a.unlockedAt && "text-muted-foreground")}>
+        <div className={cn("font-medium leading-snug", !a.unlockedAt && "text-muted-foreground")}>
           {achievementName(a, t, unit, locale)}
         </div>
         {!a.unlockedAt && (
