@@ -401,6 +401,14 @@ export async function removeMyProgramExercise(formData: FormData) {
   const id = str(formData, "id");
   const ctx = await ownDay(program_id, day_id);
 
+  // Logged sets hang off this row. Dropping it would take that history with it,
+  // so a day already trained keeps its exercises.
+  const { count } = await ctx.supabase
+    .from("set_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("program_exercise_id", id);
+  if ((count ?? 0) > 0) redirect(`${dayPath(program_id, day_id)}?error=logged`);
+
   await ctx.supabase.from("program_exercises").delete().eq("id", id).eq("program_day_id", day_id);
 
   await afterEdit(ctx, day_id);

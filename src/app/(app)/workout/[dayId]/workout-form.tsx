@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition, type FocusEvent } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BarChart3, Check, MessageSquare, Plus } from "lucide-react";
 import { makeT, type Locale, type TranslationKey } from "@/i18n/dictionaries";
 
@@ -19,7 +21,15 @@ import { DEFAULT_FOCUS, FOCUS_LABEL, focusTotals, type FocusMetric } from "@/lib
 import { FocusMetricPicker, formatFocus } from "@/components/focus-metric-picker";
 import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
-import { finishWorkout, setFocusMetric, skipDay, updateWorkout, type NoteInput, type SetInput } from "../actions";
+import {
+  addExerciseToDay,
+  finishWorkout,
+  setFocusMetric,
+  skipDay,
+  updateWorkout,
+  type NoteInput,
+  type SetInput,
+} from "../actions";
 
 import type { PrevSet, Row, WorkoutItem } from "@/lib/workout-rows";
 export type { PrevSet, Row, WorkoutItem };
@@ -112,6 +122,10 @@ type Props = {
   focus?: Record<string, FocusMetric>;
   /** Coach logging for a client: the workout is saved under this client. */
   clientId?: string;
+  /** The exercise library, when this person may add one to the day. */
+  library?: { id: string; name: string }[];
+  /** Day editor for this day, when it belongs to a program this person wrote. */
+  editDayHref?: string;
 } & (
   | { mode?: "log" }
   | {
@@ -136,6 +150,8 @@ export function WorkoutForm(props: Props) {
     restTimerSec = 0,
     stats,
     focus: savedFocus,
+    library,
+    editDayHref,
   } = props;
   const isEdit = props.mode === "edit";
   const t = makeT(locale);
@@ -160,6 +176,23 @@ export function WorkoutForm(props: Props) {
   const [sheet, setSheet] = useState<{ itemId: string; tab: SheetTab } | null>(null);
   const [focusPicker, setFocusPicker] = useState<string | null>(null);
   const [focus, setFocus] = useState<Record<string, FocusMetric>>(savedFocus ?? {});
+  const [adding, setAdding] = useState("");
+  const router = useRouter();
+
+  /** Put an exercise into the day, then re-read the page so it shows up with its rows. */
+  function addExercise() {
+    if (!adding) return;
+    startTransition(async () => {
+      const result = await addExerciseToDay({ dayId, exerciseId: adding, clientId });
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+      setError(null);
+      setAdding("");
+      router.refresh();
+    });
+  }
 
   // After mount: restore an unfinished draft (log mode) or compute the local date (edit mode).
   // localStorage and the local timezone are only available in the browser, hence an effect.
@@ -489,6 +522,39 @@ export function WorkoutForm(props: Props) {
           </Card>
         );
       })}
+
+      {!isEdit && library && library.length > 0 && (
+        <div className="space-y-2 rounded-xl border border-dashed p-3">
+          <label htmlFor="add_exercise" className="text-sm font-medium">
+            {t("workout.addExercise")}
+          </label>
+          <div className="flex gap-2">
+            <select
+              id="add_exercise"
+              value={adding}
+              onChange={(e) => setAdding(e.target.value)}
+              className="h-11 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-base"
+            >
+              <option value="">—</option>
+              {library.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                </option>
+              ))}
+            </select>
+            <Button type="button" onClick={addExercise} disabled={!adding || pending} className="h-11">
+              <Plus className="size-4" />
+              {t("common.add")}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">{t("workout.addExerciseHint")}</p>
+          {editDayHref && (
+            <Link href={editDayHref} className="inline-block text-sm text-primary underline-offset-4 hover:underline">
+              {t("workout.editDay")}
+            </Link>
+          )}
+        </div>
+      )}
 
       {canLog && (
         <>

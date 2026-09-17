@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Check, ChevronRight, Circle, PencilRuler } from "lucide-react";
+import { Check, ChevronRight, Circle, Pencil, PencilRuler } from "lucide-react";
 import { getProfile } from "@/lib/profile";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
@@ -39,6 +39,10 @@ export default async function ProgramPage() {
     );
   }
 
+  // The client wrote this plan, so every day of it can be edited from here.
+  const canEdit =
+    data.program.created_by === profile.id && data.program.review_status !== "pending";
+
   const weeks = new Map<number, typeof data.days>();
   for (const d of data.days) {
     const list = weeks.get(d.week_no) ?? [];
@@ -70,10 +74,10 @@ export default async function ProgramPage() {
               const doneAt = data.doneMap.get(d.id);
               const isNext = data.nextDay?.id === d.id;
               return (
-                <li key={d.id}>
+                <li key={d.id} className={cn("flex items-center", isNext && "bg-primary/5")}>
                   <Link
                     href={`/workout/${d.id}`}
-                    className={cn("flex items-center gap-3 px-4 py-3", isNext && "bg-primary/5")}
+                    className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3"
                   >
                     {doneAt ? (
                       <span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -96,6 +100,16 @@ export default async function ProgramPage() {
                     </div>
                     <ChevronRight className="size-4 text-muted-foreground" />
                   </Link>
+                  {canEdit && (
+                    <Link
+                      href={`/my-programs/${data.program.id}/days/${d.id}`}
+                      aria-label={t("workout.editDay")}
+                      title={t("workout.editDay")}
+                      className="flex size-11 shrink-0 items-center justify-center text-muted-foreground"
+                    >
+                      <Pencil className="size-4" />
+                    </Link>
+                  )}
                 </li>
               );
             })}

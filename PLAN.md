@@ -376,3 +376,28 @@ around the old metrics:
 
 Checked in Chromium at 390 / 360 / 320px: program list, workout grid, achievements
 strip and rows, tab bar — no horizontal overflow, no clipped labels.
+
+## Adding an exercise from the workout screen (2026-09-17)
+
+A client could already edit a program they wrote themselves, but only through
+Program → "My programs" → the program → the day. Mid-workout, with a barbell
+waiting, that path does not exist. Two ways in now:
+
+- **On the workout screen**, under the exercise cards: pick from the library and
+  the exercise is added to that day of the program — not just to today's session,
+  so it is there next time as well. `addExerciseToDay` refuses politely when the
+  plan was written by a coach ("only they can change it") or is out for review;
+  a coach may add to any program, as their RLS already allows. An approved
+  program drops to `self` on the first change, the same rule the day editor uses.
+  The link "Edit this day" sits next to it for targets, order and removal.
+- **On the Program tab**, each day of a program the client wrote gets a pencil
+  that opens the day editor directly.
+
+The workout draft in localStorage is keyed by `program_exercise` id and only
+restores ids that still exist, so a refresh after adding keeps everything typed
+so far and gives the new exercise fresh rows.
+
+Removal now checks first: `set_logs` hang off `program_exercises`, so deleting a
+row that has logged sets would take that history with it. The day editor refuses
+with a message and points at days not yet trained. (The coach's own day editor
+still deletes without that check — a follow-up.)

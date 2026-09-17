@@ -28,14 +28,14 @@ export default async function MyDayPage({
   searchParams,
 }: {
   params: Promise<{ id: string; dayId: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string }>;
 }) {
   const profile = await getProfile();
   if (!profile) redirect("/login");
   const locale = await getRequestLocale(profile.locale);
   const t = makeT(locale);
   const { id: programId, dayId } = await params;
-  const { saved } = await searchParams;
+  const { saved, error } = await searchParams;
 
   const supabase = await createClient();
   const [{ data: day }, { data: items }, { data: library }] = await Promise.all([
@@ -80,6 +80,10 @@ export default async function MyDayPage({
 
       {pending && (
         <p className="rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">{t("mine.locked")}</p>
+      )}
+
+      {error === "logged" && (
+        <p className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{t("day.hasLogs")}</p>
       )}
 
       {!pending && (

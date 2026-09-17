@@ -44,7 +44,9 @@ export default async function WorkoutPage({
   const [{ data: day }, { data: items }, { data: lastDone }, { data: recent }] = await Promise.all([
     supabase
       .from("program_days")
-      .select("id, week_no, day_no, title, program:programs!inner(id, name)")
+      .select(
+        "id, week_no, day_no, title, program:programs!inner(id, name, client_id, created_by, review_status)",
+      )
       .eq("id", dayId)
       .maybeSingle(),
     supabase
@@ -120,6 +122,15 @@ export default async function WorkoutPage({
     if (isFocusMetric(row.metric)) focus[row.exercise_id] = row.metric;
   }
 
+  // Adding an exercise mid-workout is only for the person who wrote the program;
+  // a coach's plan is edited in the coach's builder.
+  const ownProgram =
+    day.program.client_id === profile.id && day.program.created_by === profile.id;
+  const canAdd = day.program.review_status !== "pending" && (ownProgram || profile.role === "coach");
+  const { data: library } = canAdd
+    ? await supabase.from("exercises").select("id, name").order("name")
+    : { data: null };
+
   const backHref = forClient ? `/clients/${owner.id}` : profile.role === "coach" ? "/me" : "/";
 
   return (
@@ -160,6 +171,8 @@ export default async function WorkoutPage({
         restTimerSec={profile.rest_timer_sec}
         stats={stats}
         focus={focus}
+        library={library ?? undefined}
+        editDayHref={ownProgram ? `/my-programs/${day.program.id}/days/${day.id}` : undefined}
       />
     </div>
   );

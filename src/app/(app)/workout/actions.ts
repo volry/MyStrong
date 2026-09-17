@@ -188,6 +188,62 @@ export async function updateWorkout(input: UpdateInput): Promise<{ error: Transl
   redirect(`/history/${workout.id}?saved=1`);
 }
 
+/**
+ * Add an exercise to the day you are training, from the workout screen.
+ *
+ * It lands in the program day itself, not just in today's session, so it is there
+ * next time too — the same thing the day editor does, reachable mid-set. Only the
+ * person who wrote the program may do it; a coach's plan stays the coach's.
+ */
+export async function addExerciseToDay(input: {
+  dayId: string;
+  exerciseId: string;
+  clientId?: string;
+}): Promise<{ error: TranslationKey } | void> {
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (!input.dayId || !input.exerciseId) return { error: "common.error" };
+
+  const supabase = await createClient();
+  const { data: day } = await supabase
+    .from("program_days")
+    .select("id, program:programs!inner(id, client_id, created_by, review_status, is_active)")
+    .eq("id", input.dayId)
+    .maybeSingle();
+  if (!day) return { error: "common.error" };
+
+  const program = day.program;
+  const mine = program.client_id === profile.id && program.created_by === profile.id;
+  if (!mine && profile.role !== "coach") return { error: "workout.addNotYours" };
+  if (program.review_status === "pending") return { error: "workout.addWhilePending" };
+
+  const { data: last } = await supabase
+    .from("program_exercises")
+    .select("position")
+    .eq("program_day_id", input.dayId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = await supabase.from("program_exercises").insert({
+    program_day_id: input.dayId,
+    exercise_id: input.exerciseId,
+    position: (last?.position ?? 0) + 1,
+  });
+  if (error) return { error: "common.error" };
+
+  // An approved program that changes is no longer what the coach approved — the
+  // same rule the day editor follows.
+  if (mine && program.review_status === "approved") {
+    await supabase.from("programs").update({ review_status: "self" }).eq("id", program.id);
+  }
+
+  revalidatePath(`/workout/${input.dayId}`);
+  revalidatePath("/program");
+  revalidatePath("/");
+  if (input.clientId) revalidatePath(`/clients/${input.clientId}`);
+}
+
 export async function skipDay(formData: FormData) {
   const profile = await getProfile();
   if (!profile) redirect("/login");
