@@ -36,13 +36,20 @@ export type FinishInput = {
  * only when that moment is believable. A session left open overnight, or a clock
  * ahead of the server, falls back to now.
  */
-function performedAtFrom(startedAt: string | undefined): string | undefined {
-  if (!startedAt) return undefined;
+function sessionFrom(startedAt: string | undefined): {
+  performed_at?: string;
+  duration_sec?: number;
+} {
+  if (!startedAt) return {};
   const started = new Date(startedAt).getTime();
-  if (!Number.isFinite(started)) return undefined;
+  if (!Number.isFinite(started)) return {};
   const ago = Date.now() - started;
-  if (ago < 0 || ago > 12 * 60 * 60 * 1000) return undefined;
-  return new Date(started).toISOString();
+  if (ago < 0 || ago > 12 * 60 * 60 * 1000) return {};
+  return {
+    performed_at: new Date(started).toISOString(),
+    // A session shorter than a minute is a mis-tap, not a workout worth timing.
+    duration_sec: ago >= 60_000 ? Math.round(ago / 1000) : undefined,
+  };
 }
 
 function cleanInt(v: unknown, max: number): number | null {
@@ -104,7 +111,7 @@ export async function finishWorkout(input: FinishInput): Promise<{ error: Transl
       client_id: ownerId,
       status: "done",
       client_comment: input.comment?.trim() ? input.comment.trim().slice(0, 2000) : null,
-      performed_at: performedAtFrom(input.startedAt),
+      ...sessionFrom(input.startedAt),
     })
     .select("id")
     .single();

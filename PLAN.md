@@ -420,3 +420,29 @@ counts the time while you scroll through the exercises — the shape Strong uses
 
 No schema change. Showing the duration in history would need a column
 (`workouts.duration_sec`, or reading `created_at - performed_at`) — a follow-up.
+
+## Workout duration in the database (2026-09-18)
+
+Migration `workouts_duration_sec` (applied through the Supabase connector, as
+always — it lives in the project's migration history, not in this repo):
+
+```sql
+alter table public.workouts
+  add column duration_sec integer,
+  add constraint workouts_duration_sec_sane
+    check (duration_sec is null or (duration_sec > 0 and duration_sec <= 43200));
+```
+
+- `finishWorkout` measures from the "Start the workout" tap to the save and
+  writes both `performed_at` (the start) and `duration_sec`. Under a minute is
+  treated as a mis-tap and left null, as is a session older than 12 hours.
+- Null means the clock was never started, so every workout logged before today
+  stays null and every screen simply omits the duration.
+- Shown on the history list, the workout detail (a badge next to the date), and
+  the coach's recent-workouts list. `formatDuration` prints "52 хв" / "1 год 05 хв".
+- No column-level grants on `workouts`, so `authenticated` reaches the new column
+  and the existing row policies still decide who may write it. Verified on the
+  live database inside a rolled-back transaction: as the client, insert 3120 and
+  update to 3600 both succeed, and 999999 is rejected by the check constraint.
+- The Google Sheets export (`export_sets`) still returns set rows only; adding
+  duration there would mean changing the function and the sheet's columns.

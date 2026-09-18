@@ -6,7 +6,7 @@ import { getProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 import { formatWeight } from "@/lib/units";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +31,7 @@ export default async function WorkoutDetailPage({
   const { data: w } = await supabase
     .from("workouts")
     .select(
-      "id, performed_at, status, client_comment, client_id, client:profiles!client_id(full_name, email), program_day:program_days(week_no, day_no, title, program:programs(name)), set_logs(set_no, reps, weight, time_sec, program_exercise:program_exercises(id, position, exercise:exercises(name))), workout_exercise_notes(program_exercise_id, note)",
+      "id, performed_at, status, duration_sec, client_comment, client_id, client:profiles!client_id(full_name, email), program_day:program_days(week_no, day_no, title, program:programs(name)), set_logs(set_no, reps, weight, time_sec, program_exercise:program_exercises(id, position, exercise:exercises(name))), workout_exercise_notes(program_exercise_id, note)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -67,6 +67,9 @@ export default async function WorkoutDetailPage({
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{formatDate(w.performed_at, locale)}</h1>
           {w.status === "skipped" && <Badge variant="secondary">{t("history.skipped")}</Badge>}
+          {formatDuration(w.duration_sec, t) && (
+            <Badge variant="outline">{formatDuration(w.duration_sec, t)}</Badge>
+          )}
         </div>
         {w.program_day && (
           <p className="text-muted-foreground">

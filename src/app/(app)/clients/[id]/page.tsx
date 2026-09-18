@@ -6,7 +6,7 @@ import { requireCoach } from "@/lib/coach";
 import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +41,9 @@ export default async function ClientPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("workouts")
-      .select("id, performed_at, status, client_comment, program_day:program_days(week_no, day_no, title), set_logs(count)")
+      .select(
+        "id, performed_at, status, duration_sec, client_comment, program_day:program_days(week_no, day_no, title), set_logs(count)",
+      )
       .eq("client_id", id)
       .order("performed_at", { ascending: false })
       .limit(20),
@@ -214,6 +216,9 @@ export default async function ClientPage({
                         ? `${t("prog.week", { n: w.program_day.week_no })} · ${t("prog.day", { n: w.program_day.day_no })}${w.program_day.title ? ` · ${w.program_day.title}` : ""}`
                         : ""}
                       {w.status === "done" && ` · ${t("history.sets", { n: w.set_logs[0]?.count ?? 0 })}`}
+                      {w.status === "done" &&
+                        formatDuration(w.duration_sec, t) &&
+                        ` · ${formatDuration(w.duration_sec, t)}`}
                     </div>
                     {w.client_comment && (
                       <div className="mt-1 flex items-start gap-1 text-sm">

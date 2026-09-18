@@ -487,6 +487,7 @@ export type Database = {
           client_comment: string | null
           client_id: string
           created_at: string
+          duration_sec: number | null
           id: string
           performed_at: string
           program_day_id: string
@@ -496,6 +497,7 @@ export type Database = {
           client_comment?: string | null
           client_id: string
           created_at?: string
+          duration_sec?: number | null
           id?: string
           performed_at?: string
           program_day_id: string
@@ -505,6 +507,7 @@ export type Database = {
           client_comment?: string | null
           client_id?: string
           created_at?: string
+          duration_sec?: number | null
           id?: string
           performed_at?: string
           program_day_id?: string

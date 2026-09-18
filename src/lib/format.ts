@@ -1,3 +1,5 @@
+import type { T } from "@/i18n/dictionaries";
+
 export type Targets = {
   target_sets: number | null;
   target_reps: number | null;
@@ -40,4 +42,13 @@ export function formatElapsed(totalSeconds: number): string {
   const seconds = s % 60;
   const pad = (n: number) => String(n).padStart(2, "0");
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
+}
+
+/** How long a session took, for history: "52 хв", "1 год 05 хв". */
+export function formatDuration(seconds: number | null | undefined, t: T): string | null {
+  if (seconds == null || seconds <= 0) return null;
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? t("workout.hoursMinutes", { h, m: String(m).padStart(2, "0") }) : t("workout.minutes", { n: m });
 }

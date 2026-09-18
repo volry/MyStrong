@@ -5,7 +5,7 @@ import { getProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getRequestLocale } from "@/i18n/server";
 import { makeT } from "@/i18n/dictionaries";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 
 export default async function HistoryPage() {
@@ -18,7 +18,7 @@ export default async function HistoryPage() {
   const { data: workouts } = await supabase
     .from("workouts")
     .select(
-      "id, performed_at, status, client_comment, program_day:program_days(week_no, day_no, title, program:programs(name)), set_logs(count)",
+      "id, performed_at, status, duration_sec, client_comment, program_day:program_days(week_no, day_no, title, program:programs(name)), set_logs(count)",
     )
     .eq("client_id", profile.id)
     .order("performed_at", { ascending: false })
@@ -45,6 +45,7 @@ export default async function HistoryPage() {
                       ? `${t("prog.week", { n: w.program_day.week_no })} · ${t("prog.day", { n: w.program_day.day_no })}${w.program_day.title ? ` · ${w.program_day.title}` : ""}`
                       : ""}
                     {w.status === "done" && ` · ${t("history.sets", { n: w.set_logs[0]?.count ?? 0 })}`}
+                    {w.status === "done" && formatDuration(w.duration_sec, t) && ` · ${formatDuration(w.duration_sec, t)}`}
                   </div>
                   {w.client_comment && (
                     <div className="mt-1 flex items-start gap-1 text-sm">
