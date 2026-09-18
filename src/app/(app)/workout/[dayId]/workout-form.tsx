@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MuscleBadge } from "@/components/muscle-badges";
+import { TextBlock } from "@/components/day-blocks";
 import { RestTimer, type RestTimerHandle } from "@/components/rest-timer";
 import { ExerciseSheet, type SheetTab } from "@/components/exercise-sheet";
 import type { ExerciseStats } from "@/lib/exercise-stats";
@@ -128,6 +129,9 @@ type Props = {
   focus?: Record<string, FocusMetric>;
   /** Coach logging for a client: the workout is saved under this client. */
   clientId?: string;
+  /** Free text to read before and after the session; nothing is logged for it. */
+  warmup?: string | null;
+  cooldown?: string | null;
   /** The exercise library, when this person may add one to the day. */
   library?: { id: string; name: string }[];
   /** Day editor for this day, when it belongs to a program this person wrote. */
@@ -158,6 +162,8 @@ export function WorkoutForm(props: Props) {
     focus: savedFocus,
     library,
     editDayHref,
+    warmup,
+    cooldown,
   } = props;
   const isEdit = props.mode === "edit";
   const t = makeT(locale);
@@ -402,6 +408,8 @@ export function WorkoutForm(props: Props) {
         )
       )}
 
+      <TextBlock title={t("day.warmup")} text={warmup} />
+
       {items.map((item, idx) => {
         const timeMode = usesTime(item);
         const prev = !isEdit && item.exercise ? previous[item.exercise.id] : undefined;
@@ -591,6 +599,8 @@ export function WorkoutForm(props: Props) {
           )}
         </div>
       )}
+
+      <TextBlock title={t("day.cooldown")} text={cooldown} />
 
       {canLog && (
         <>

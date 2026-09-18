@@ -22,3 +22,10 @@ export function num(fd: FormData, key: string): number | null {
 export function nullable(s: string): string | null {
   return s === "" ? null : s;
 }
+
+/** Free-text block (warm-up, cool-down): trimmed, capped to what the column allows. */
+export function text(fd: FormData, key: string, max = 2000): string | null {
+  const v = fd.get(key);
+  const s = typeof v === "string" ? v.trim().slice(0, max) : "";
+  return s === "" ? null : s;
+}

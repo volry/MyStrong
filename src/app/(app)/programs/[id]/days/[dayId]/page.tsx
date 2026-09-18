@@ -9,6 +9,7 @@ import { formatTarget } from "@/lib/format";
 import { muscleLabel } from "@/lib/muscles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DayBlocks } from "@/components/day-blocks";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -42,7 +43,7 @@ export default async function DayPage({
   const [{ data: day }, { data: items }, { data: library }] = await Promise.all([
     supabase
       .from("program_days")
-      .select("id, week_no, day_no, title, program:programs!inner(id, name)")
+      .select("id, week_no, day_no, title, warmup, cooldown, program:programs!inner(id, name)")
       .eq("id", dayId)
       .eq("program_id", programId)
       .maybeSingle(),
@@ -75,17 +76,20 @@ export default async function DayPage({
         </h1>
       </div>
 
-      <form action={updateDay} className="flex max-w-xl gap-2">
+      <form action={updateDay} className="max-w-xl space-y-3">
         <HiddenIds {...ids} />
-        <Input
-          name="title"
-          defaultValue={day.title ?? ""}
-          placeholder={t("prog.dayTitle")}
-          className="h-12 flex-1 text-base"
-        />
-        <Button type="submit" variant="secondary" className="h-12">
-          {t("common.save")}
-        </Button>
+        <div className="flex gap-2">
+          <Input
+            name="title"
+            defaultValue={day.title ?? ""}
+            placeholder={t("prog.dayTitle")}
+            className="h-12 flex-1 text-base"
+          />
+          <Button type="submit" variant="secondary" className="h-12">
+            {t("common.save")}
+          </Button>
+        </div>
+        <DayBlocks t={t} warmup={day.warmup} cooldown={day.cooldown} />
       </form>
       {saved === "1" && <p className="-mt-4 text-sm text-primary">{t("common.saved")}</p>}
 

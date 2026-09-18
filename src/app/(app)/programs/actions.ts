@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireCoach } from "@/lib/coach";
-import { int, num, nullable, str } from "@/lib/form";
+import { int, num, nullable, str, text } from "@/lib/form";
 import { sendPushTo } from "@/lib/push";
 
 function programPath(id: string) {
@@ -118,7 +118,7 @@ export async function copyProgram(formData: FormData) {
   const { data: source } = await supabase
     .from("programs")
     .select(
-      "id, name, notes, program_days(week_no, day_no, title, program_exercises(exercise_id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes))",
+      "id, name, notes, program_days(week_no, day_no, title, warmup, cooldown, program_exercises(exercise_id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes))",
     )
     .eq("id", source_id)
     .maybeSingle();
@@ -140,7 +140,14 @@ export async function copyProgram(formData: FormData) {
   for (const d of source.program_days) {
     const { data: nd } = await supabase
       .from("program_days")
-      .insert({ program_id: created.id, week_no: d.week_no, day_no: d.day_no, title: d.title })
+      .insert({
+        program_id: created.id,
+        week_no: d.week_no,
+        day_no: d.day_no,
+        title: d.title,
+        warmup: d.warmup,
+        cooldown: d.cooldown,
+      })
       .select("id")
       .single();
     if (nd && d.program_exercises.length > 0) {
@@ -247,7 +254,7 @@ export async function duplicateWeek(formData: FormData) {
     supabase
       .from("program_days")
       .select(
-        "day_no, title, program_exercises(exercise_id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes)",
+        "day_no, title, warmup, cooldown, program_exercises(exercise_id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes)",
       )
       .eq("program_id", program_id)
       .eq("week_no", week_no)
@@ -265,7 +272,14 @@ export async function duplicateWeek(formData: FormData) {
   for (const d of days ?? []) {
     const { data: nd } = await supabase
       .from("program_days")
-      .insert({ program_id, week_no: newWeek, day_no: d.day_no, title: d.title })
+      .insert({
+        program_id,
+        week_no: newWeek,
+        day_no: d.day_no,
+        title: d.title,
+        warmup: d.warmup,
+        cooldown: d.cooldown,
+      })
       .select("id")
       .single();
     if (nd && d.program_exercises.length > 0) {
@@ -300,7 +314,11 @@ export async function updateDay(formData: FormData) {
   const supabase = await createClient();
   await supabase
     .from("program_days")
-    .update({ title: nullable(str(formData, "title")) })
+    .update({
+      title: nullable(str(formData, "title")),
+      warmup: text(formData, "warmup"),
+      cooldown: text(formData, "cooldown"),
+    })
     .eq("id", day_id);
 
   revalidatePath(dayPath(program_id, day_id));

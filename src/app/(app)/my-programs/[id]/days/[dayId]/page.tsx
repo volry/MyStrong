@@ -14,6 +14,7 @@ import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
 import { TargetFields } from "@/components/target-fields";
 import { MuscleBadge } from "@/components/muscle-badges";
+import { DayBlocks } from "@/components/day-blocks";
 import {
   addMyProgramExercise,
   deleteMyDay,
@@ -42,7 +43,7 @@ export default async function MyDayPage({
     supabase
       .from("program_days")
       .select(
-        "id, week_no, day_no, title, program:programs!inner(id, name, review_status, client_id, created_by)",
+        "id, week_no, day_no, title, warmup, cooldown, program:programs!inner(id, name, review_status, client_id, created_by)",
       )
       .eq("id", dayId)
       .eq("program_id", programId)
@@ -87,17 +88,20 @@ export default async function MyDayPage({
       )}
 
       {!pending && (
-        <form action={updateMyDay} className="flex gap-2">
+        <form action={updateMyDay} className="space-y-3">
           <HiddenIds {...ids} />
-          <Input
-            name="title"
-            defaultValue={day.title ?? ""}
-            placeholder={t("prog.dayTitle")}
-            className="h-12 flex-1 text-base"
-          />
-          <Button type="submit" variant="secondary" className="h-12">
-            {t("common.save")}
-          </Button>
+          <div className="flex gap-2">
+            <Input
+              name="title"
+              defaultValue={day.title ?? ""}
+              placeholder={t("prog.dayTitle")}
+              className="h-12 flex-1 text-base"
+            />
+            <Button type="submit" variant="secondary" className="h-12">
+              {t("common.save")}
+            </Button>
+          </div>
+          <DayBlocks t={t} warmup={day.warmup} cooldown={day.cooldown} />
         </form>
       )}
       {saved === "1" && <p className="-mt-3 text-sm text-primary">{t("common.saved")}</p>}

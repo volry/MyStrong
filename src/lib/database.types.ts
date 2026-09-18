@@ -209,27 +209,33 @@ export type Database = {
       }
       program_days: {
         Row: {
+          cooldown: string | null
           created_at: string
           day_no: number
           id: string
           program_id: string
           title: string | null
+          warmup: string | null
           week_no: number
         }
         Insert: {
+          cooldown?: string | null
           created_at?: string
           day_no: number
           id?: string
           program_id: string
           title?: string | null
+          warmup?: string | null
           week_no: number
         }
         Update: {
+          cooldown?: string | null
           created_at?: string
           day_no?: number
           id?: string
           program_id?: string
           title?: string | null
+          warmup?: string | null
           week_no?: number
         }
         Relationships: [

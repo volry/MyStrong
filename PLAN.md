@@ -446,3 +446,31 @@ alter table public.workouts
   update to 3600 both succeed, and 999999 is rejected by the check constraint.
 - The Google Sheets export (`export_sets`) still returns set rows only; adding
   duration there would mean changing the function and the sheet's columns.
+
+## Warm-up and cool-down as text (2026-09-18)
+
+A day can carry a warm-up and a cool-down written as plain lines — "10 присідань
+/ рол на спину / потягнути стегно". They are read, never logged: no sets, no
+weights, nothing to tick, because counting a foam roll is not the point.
+
+Migration `program_days_warmup_cooldown`:
+
+```sql
+alter table public.program_days
+  add column warmup text,
+  add column cooldown text,
+  add constraint program_days_warmup_length check (warmup is null or char_length(warmup) <= 2000),
+  add constraint program_days_cooldown_length check (cooldown is null or char_length(cooldown) <= 2000);
+```
+
+- Both day editors (the coach's and the client's own) gained two textareas next
+  to the day title, sharing `DayBlocks`; `form.text()` trims and caps at the
+  2000 the column allows, so a paste can never hit the constraint.
+- The workout screen renders the warm-up above the first exercise and the
+  cool-down below the last one, as a bulleted list of the non-empty lines.
+  Empty blocks render nothing at all.
+- Duplicating a week and copying a program carry the text with the day; without
+  that, week two of a duplicated program would silently lose its warm-up.
+- Verified on the live database in a rolled-back transaction: the client writes
+  three lines to a day of their own program, touches zero rows on the coach's
+  day, and 2100 characters are refused by the check.

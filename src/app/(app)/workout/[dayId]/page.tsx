@@ -45,7 +45,7 @@ export default async function WorkoutPage({
     supabase
       .from("program_days")
       .select(
-        "id, week_no, day_no, title, program:programs!inner(id, name, client_id, created_by, review_status)",
+        "id, week_no, day_no, title, warmup, cooldown, program:programs!inner(id, name, client_id, created_by, review_status)",
       )
       .eq("id", dayId)
       .maybeSingle(),
@@ -171,6 +171,8 @@ export default async function WorkoutPage({
         restTimerSec={profile.rest_timer_sec}
         stats={stats}
         focus={focus}
+        warmup={day.warmup}
+        cooldown={day.cooldown}
         library={library ?? undefined}
         editDayHref={ownProgram ? `/my-programs/${day.program.id}/days/${day.id}` : undefined}
       />

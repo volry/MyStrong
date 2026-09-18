@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, type Profile } from "@/lib/profile";
-import { int, nullable, num, str } from "@/lib/form";
+import { int, nullable, num, str, text } from "@/lib/form";
 import { coachIdsExcept, sendPushTo } from "@/lib/push";
 import type { Database } from "@/lib/database.types";
 
@@ -253,7 +253,7 @@ export async function duplicateMyWeek(formData: FormData) {
     ctx.supabase
       .from("program_days")
       .select(
-        "day_no, title, program_exercises(exercise_id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes)",
+        "day_no, title, warmup, cooldown, program_exercises(exercise_id, position, target_sets, target_reps, target_weight, target_time_sec, target_rpe, coach_notes)",
       )
       .eq("program_id", program_id)
       .eq("week_no", week_no)
@@ -271,7 +271,14 @@ export async function duplicateMyWeek(formData: FormData) {
   for (const d of days ?? []) {
     const { data: nd } = await ctx.supabase
       .from("program_days")
-      .insert({ program_id, week_no: newWeek, day_no: d.day_no, title: d.title })
+      .insert({
+        program_id,
+        week_no: newWeek,
+        day_no: d.day_no,
+        title: d.title,
+        warmup: d.warmup,
+        cooldown: d.cooldown,
+      })
       .select("id")
       .single();
     if (nd && d.program_exercises.length > 0) {
@@ -308,7 +315,11 @@ export async function updateMyDay(formData: FormData) {
 
   await ctx.supabase
     .from("program_days")
-    .update({ title: nullable(str(formData, "title")) })
+    .update({
+      title: nullable(str(formData, "title")),
+      warmup: text(formData, "warmup"),
+      cooldown: text(formData, "cooldown"),
+    })
     .eq("id", day_id)
     .eq("program_id", program_id);
 
