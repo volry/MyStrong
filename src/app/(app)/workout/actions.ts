@@ -27,7 +27,23 @@ export type FinishInput = {
   notes?: NoteInput[];
   /** Coach logging on behalf of a client. */
   clientId?: string;
+  /** When "Start the workout" was tapped, ISO. */
+  startedAt?: string;
 };
+
+/**
+ * A workout belongs to the moment it started, not the moment it was saved — but
+ * only when that moment is believable. A session left open overnight, or a clock
+ * ahead of the server, falls back to now.
+ */
+function performedAtFrom(startedAt: string | undefined): string | undefined {
+  if (!startedAt) return undefined;
+  const started = new Date(startedAt).getTime();
+  if (!Number.isFinite(started)) return undefined;
+  const ago = Date.now() - started;
+  if (ago < 0 || ago > 12 * 60 * 60 * 1000) return undefined;
+  return new Date(started).toISOString();
+}
 
 function cleanInt(v: unknown, max: number): number | null {
   if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return null;
@@ -88,6 +104,7 @@ export async function finishWorkout(input: FinishInput): Promise<{ error: Transl
       client_id: ownerId,
       status: "done",
       client_comment: input.comment?.trim() ? input.comment.trim().slice(0, 2000) : null,
+      performed_at: performedAtFrom(input.startedAt),
     })
     .select("id")
     .single();

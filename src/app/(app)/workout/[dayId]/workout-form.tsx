@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState, useTransition, type FocusEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BarChart3, Check, MessageSquare, Plus } from "lucide-react";
+import { BarChart3, Check, MessageSquare, Play, Plus } from "lucide-react";
 import { makeT, type Locale, type TranslationKey } from "@/i18n/dictionaries";
 
-import { formatTarget } from "@/lib/format";
+import { formatElapsed, formatTarget } from "@/lib/format";
 import { formatWeight, kgToUnit, unitToKg, type Unit } from "@/lib/units";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,13 @@ import {
 import type { PrevSet, Row, WorkoutItem } from "@/lib/workout-rows";
 export type { PrevSet, Row, WorkoutItem };
 
-type Draft = { rows: Record<string, Row[]>; comment: string; notes?: Record<string, string> };
+type Draft = {
+  rows: Record<string, Row[]>;
+  comment: string;
+  notes?: Record<string, string>;
+  /** When "Start the workout" was tapped, ISO. */
+  startedAt?: string;
+};
 
 function usesTime(item: WorkoutItem) {
   return item.target_time_sec != null && item.target_reps == null;
@@ -177,6 +183,7 @@ export function WorkoutForm(props: Props) {
   const [focusPicker, setFocusPicker] = useState<string | null>(null);
   const [focus, setFocus] = useState<Record<string, FocusMetric>>(savedFocus ?? {});
   const [adding, setAdding] = useState("");
+  const [startedAt, setStartedAt] = useState<string | null>(null);
   const router = useRouter();
 
   /** Put an exercise into the day, then re-read the page so it shows up with its rows. */
@@ -213,6 +220,7 @@ export function WorkoutForm(props: Props) {
               return merged;
             });
             setComment(draft.comment ?? "");
+            if (draft.startedAt) setStartedAt(draft.startedAt);
             if (draft.notes) {
               setNotes(draft.notes);
               setNoteOpen(Object.fromEntries(Object.keys(draft.notes).map((id) => [id, true])));
@@ -231,11 +239,14 @@ export function WorkoutForm(props: Props) {
   useEffect(() => {
     if (!hydrated || isEdit) return;
     try {
-      localStorage.setItem(draftKey, JSON.stringify({ rows, comment, notes } satisfies Draft));
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({ rows, comment, notes, startedAt: startedAt ?? undefined } satisfies Draft),
+      );
     } catch {
       // storage unavailable
     }
-  }, [rows, comment, notes, hydrated, isEdit, draftKey]);
+  }, [rows, comment, notes, startedAt, hydrated, isEdit, draftKey]);
 
   function updateRow(itemId: string, index: number, patch: Partial<Row>) {
     setRows((r) => ({
@@ -304,7 +315,14 @@ export function WorkoutForm(props: Props) {
               sets,
               notes: noteList,
             })
-          : await finishWorkout({ dayId, comment, sets, notes: noteList, clientId });
+          : await finishWorkout({
+              dayId,
+              comment,
+              sets,
+              notes: noteList,
+              clientId,
+              startedAt: startedAt ?? undefined,
+            });
       if (result?.error) {
         setError(result.error);
         return;
@@ -364,6 +382,24 @@ export function WorkoutForm(props: Props) {
         )
       ) : (
         <p className="text-xs text-muted-foreground">{t("workout.tickHint")}</p>
+      )}
+
+      {canLog && !isEdit && (
+        startedAt ? (
+          <ElapsedBar startedAt={startedAt} label={t("workout.inProgress")} />
+        ) : (
+          <div className="space-y-1">
+            <Button
+              type="button"
+              onClick={() => setStartedAt(new Date().toISOString())}
+              className="h-14 w-full text-lg"
+            >
+              <Play className="size-5" />
+              {t("workout.start")}
+            </Button>
+            <p className="text-xs text-muted-foreground">{t("workout.startHint")}</p>
+          </div>
+        )
       )}
 
       {items.map((item, idx) => {
@@ -632,3 +668,27 @@ export function WorkoutForm(props: Props) {
     </div>
   );
 }
+
+/**
+ * How long the session has been running, pinned to the top of the screen while
+ * you scroll through the exercises. The number is recomputed from the start
+ * timestamp on every tick, so a phone that slept keeps the right time.
+ */
+function ElapsedBar({ startedAt, label }: { startedAt: string; label: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const seconds = (now - new Date(startedAt).getTime()) / 1000;
+  return (
+    <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between gap-2 border-b bg-background/95 px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur">
+      <span className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span className="size-2 rounded-full bg-primary" />
+        {label}
+      </span>
+      <span className="text-lg font-semibold tabular-nums">{formatElapsed(seconds)}</span>
+    </div>
+  );
+}
+

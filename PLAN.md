@@ -401,3 +401,22 @@ Removal now checks first: `set_logs` hang off `program_exercises`, so deleting a
 row that has logged sets would take that history with it. The day editor refuses
 with a message and points at days not yet trained. (The coach's own day editor
 still deletes without that check — a follow-up.)
+
+## "Start the workout" (2026-09-18)
+
+The screen had a finish and no beginning: you opened a day and typed. Now a
+primary button starts the session, and a sticky bar at the top of the screen
+counts the time while you scroll through the exercises — the shape Strong uses.
+
+- The start time lives in the localStorage draft next to the rows, so locking the
+  phone, leaving the app, or reloading mid-session keeps the clock honest.
+- The bar recomputes from the timestamp on every tick rather than counting
+  seconds, so a slept phone shows the right number when it wakes.
+- `finishWorkout` takes `startedAt` and writes it to `performed_at`: a workout
+  belongs to the moment it began, not the moment it was saved. `performedAtFrom`
+  ignores a start time in the future or more than 12 hours old (a session left
+  open overnight), and falls back to the database default.
+- Nothing is required: without tapping start, everything behaves as before.
+
+No schema change. Showing the duration in history would need a column
+(`workouts.duration_sec`, or reading `created_at - performed_at`) — a follow-up.
