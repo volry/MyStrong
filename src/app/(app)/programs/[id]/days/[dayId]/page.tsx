@@ -10,6 +10,7 @@ import { muscleLabel } from "@/lib/muscles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DayBlocks } from "@/components/day-blocks";
+import { ExercisePicker } from "@/components/exercise-picker";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -305,23 +306,8 @@ export default async function DayPage({
                 <form action={addProgramExercise} className="space-y-3">
                   <HiddenIds {...ids} />
                   <div className="space-y-2">
-                    <Label htmlFor="exercise_id">{t("day.pick")}</Label>
-                    <select
-                      id="exercise_id"
-                      name="exercise_id"
-                      required
-                      defaultValue=""
-                      className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base"
-                    >
-                      <option value="" disabled>
-                        —
-                      </option>
-                      {library.map((e) => (
-                        <option key={e.id} value={e.id}>
-                          {e.name}
-                        </option>
-                      ))}
-                    </select>
+                    <Label>{t("day.pick")}</Label>
+                    <ExercisePicker exercises={library} locale={locale} />
                   </div>
                   <TargetFields t={t} idPrefix="new" />
                   <Button type="submit" className="h-12 w-full text-base">

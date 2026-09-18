@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MuscleBadge } from "@/components/muscle-badges";
 import { TextBlock } from "@/components/day-blocks";
+import { ExercisePicker, type PickerExercise } from "@/components/exercise-picker";
 import { RestTimer, type RestTimerHandle } from "@/components/rest-timer";
 import { ExerciseSheet, type SheetTab } from "@/components/exercise-sheet";
 import type { ExerciseStats } from "@/lib/exercise-stats";
@@ -133,7 +134,7 @@ type Props = {
   warmup?: string | null;
   cooldown?: string | null;
   /** The exercise library, when this person may add one to the day. */
-  library?: { id: string; name: string }[];
+  library?: PickerExercise[];
   /** Day editor for this day, when it belongs to a program this person wrote. */
   editDayHref?: string;
 } & (
@@ -569,28 +570,17 @@ export function WorkoutForm(props: Props) {
 
       {!isEdit && library && library.length > 0 && (
         <div className="space-y-2 rounded-xl border border-dashed p-3">
-          <label htmlFor="add_exercise" className="text-sm font-medium">
-            {t("workout.addExercise")}
-          </label>
-          <div className="flex gap-2">
-            <select
-              id="add_exercise"
-              value={adding}
-              onChange={(e) => setAdding(e.target.value)}
-              className="h-11 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-base"
-            >
-              <option value="">—</option>
-              {library.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </select>
-            <Button type="button" onClick={addExercise} disabled={!adding || pending} className="h-11">
-              <Plus className="size-4" />
-              {t("common.add")}
-            </Button>
-          </div>
+          <div className="text-sm font-medium">{t("workout.addExercise")}</div>
+          <ExercisePicker exercises={library} locale={locale} value={adding} onChange={setAdding} />
+          <Button
+            type="button"
+            onClick={addExercise}
+            disabled={!adding || pending}
+            className="h-11 w-full"
+          >
+            <Plus className="size-4" />
+            {t("common.add")}
+          </Button>
           <p className="text-xs text-muted-foreground">{t("workout.addExerciseHint")}</p>
           {editDayHref && (
             <Link href={editDayHref} className="inline-block text-sm text-primary underline-offset-4 hover:underline">

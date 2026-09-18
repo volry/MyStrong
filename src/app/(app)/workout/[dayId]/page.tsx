@@ -128,7 +128,7 @@ export default async function WorkoutPage({
     day.program.client_id === profile.id && day.program.created_by === profile.id;
   const canAdd = day.program.review_status !== "pending" && (ownProgram || profile.role === "coach");
   const { data: library } = canAdd
-    ? await supabase.from("exercises").select("id, name").order("name")
+    ? await supabase.from("exercises").select("id, name, muscle_group").order("name")
     : { data: null };
 
   const backHref = forClient ? `/clients/${owner.id}` : profile.role === "coach" ? "/me" : "/";

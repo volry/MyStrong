@@ -15,6 +15,7 @@ import { YoutubeEmbed } from "@/components/youtube-embed";
 import { TargetFields } from "@/components/target-fields";
 import { MuscleBadge } from "@/components/muscle-badges";
 import { DayBlocks } from "@/components/day-blocks";
+import { ExercisePicker } from "@/components/exercise-picker";
 import {
   addMyProgramExercise,
   deleteMyDay,
@@ -55,7 +56,7 @@ export default async function MyDayPage({
       )
       .eq("program_day_id", dayId)
       .order("position"),
-    supabase.from("exercises").select("id, name").order("name"),
+    supabase.from("exercises").select("id, name, muscle_group").order("name"),
   ]);
   if (!day || day.program.client_id !== profile.id || day.program.created_by !== profile.id) notFound();
 
@@ -198,23 +199,8 @@ export default async function MyDayPage({
               <form action={addMyProgramExercise} className="space-y-3">
                 <HiddenIds {...ids} />
                 <div className="space-y-2">
-                  <Label htmlFor="exercise_id">{t("day.pick")}</Label>
-                  <select
-                    id="exercise_id"
-                    name="exercise_id"
-                    required
-                    defaultValue=""
-                    className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base"
-                  >
-                    <option value="" disabled>
-                      —
-                    </option>
-                    {library.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Label>{t("day.pick")}</Label>
+                  <ExercisePicker exercises={library} locale={locale} />
                 </div>
                 <TargetFields t={t} idPrefix="new" notesLabel={notesLabel} />
                 <Button type="submit" className="h-12 w-full text-base">

@@ -474,3 +474,30 @@ alter table public.program_days
 - Verified on the live database in a rolled-back transaction: the client writes
   three lines to a day of their own program, touches zero rows on the coach's
   day, and 2100 characters are refused by the check.
+
+## Picking an exercise (2026-09-18)
+
+Adding an exercise meant scrolling a `<select>` of seventy names — unusable on a
+phone between sets. `ExercisePicker` replaces it everywhere a single exercise is
+chosen: the workout screen, the client's day editor and the coach's mobile day
+editor.
+
+- Search by name, plus a chip per muscle group — only the groups the library
+  actually covers, so the row stays short.
+- Rows carry the group in its own colour (the same `MUSCLE_BADGE` tints as the
+  rest of the app), the list scrolls inside `max-h-64`, and the count below says
+  how many the filters left.
+- The chosen id rides in a hidden input, so it drops into the existing server
+  action forms in place of the `<select>`; the workout screen drives it with
+  `value`/`onChange` instead.
+- Narrowing the filters clears a selection they hide, so "Add" can never take an
+  exercise that is no longer on screen. Done in the filter handlers rather than
+  an effect, which the React Compiler lint rules reject.
+- `ex.count` now reads "Вправ: 3" rather than "3 вправ", which is wrong Ukrainian
+  at most numbers.
+
+The coach's desktop side panel keeps its own one-tap-add list, which already had
+a search box.
+
+Checked in Chromium at 390px: chips filter, a pick writes the id into the hidden
+input, filtering the pick away clears it, and picking a visible one sets it again.
