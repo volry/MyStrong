@@ -50,7 +50,12 @@ export async function saveExercise(
     ? await supabase.from("exercises").update(payload).eq("id", id)
     : await supabase.from("exercises").insert({ ...payload, created_by: profile.id });
 
-  if (error) return { error: "common.error" };
+  if (error) {
+    // Surface the reason instead of a shrug: the logs get the code, the person
+    // gets a sentence they can act on.
+    console.error("saveExercise failed", { code: error.code, message: error.message });
+    return { error: error.code === "23505" ? "ex.duplicate" : "common.error" };
+  }
 
   revalidatePath("/exercises");
   redirect("/exercises");

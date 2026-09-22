@@ -254,7 +254,12 @@ export async function addExerciseToDay(input: {
     exercise_id: input.exerciseId,
     position: (last?.position ?? 0) + 1,
   });
-  if (error) return { error: "common.error" };
+  if (error) {
+    console.error("addExerciseToDay failed", { code: error.code, message: error.message });
+    if (error.code === "23505") return { error: "workout.alreadyInDay" };
+    if (error.code === "42501") return { error: "workout.addNotYours" };
+    return { error: "common.error" };
+  }
 
   // An approved program that changes is no longer what the coach approved — the
   // same rule the day editor follows.
