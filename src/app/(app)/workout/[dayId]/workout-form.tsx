@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type FocusEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type FocusEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BarChart3, Check, MessageSquare, Play, Plus } from "lucide-react";
@@ -189,6 +189,14 @@ export function WorkoutForm(props: Props) {
   const [sheet, setSheet] = useState<{ itemId: string; tab: SheetTab } | null>(null);
   const [focusPicker, setFocusPicker] = useState<string | null>(null);
   const [focus, setFocus] = useState<Record<string, FocusMetric>>(savedFocus ?? {});
+  /**
+   * Rows for every exercise in the day as it stands now. `rows` is state seeded
+   * once, so an exercise added mid-session (the page re-renders with a longer
+   * `items`) has no entry there yet — every read falls back to these.
+   */
+  const blankRows = useMemo(() => buildRows(items, previous, unit), [items, previous, unit]);
+  const rowsOf = (itemId: string): Row[] => rows[itemId] ?? blankRows[itemId] ?? [];
+
   const [adding, setAdding] = useState("");
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const router = useRouter();
@@ -258,7 +266,9 @@ export function WorkoutForm(props: Props) {
   function updateRow(itemId: string, index: number, patch: Partial<Row>) {
     setRows((r) => ({
       ...r,
-      [itemId]: r[itemId].map((row, i) => (i === index ? { ...row, ...patch } : row)),
+      [itemId]: (r[itemId] ?? blankRows[itemId] ?? []).map((row, i) =>
+        i === index ? { ...row, ...patch } : row,
+      ),
     }));
   }
 
@@ -270,20 +280,23 @@ export function WorkoutForm(props: Props) {
 
   function addRow(itemId: string) {
     setRows((r) => {
-      const list = r[itemId];
-      const last = list[list.length - 1];
+      const list = r[itemId] ?? blankRows[itemId] ?? [];
+      const last = list[list.length - 1] ?? { weight: "", reps: "", time: "", done: false };
       return { ...r, [itemId]: [...list, { ...last, done: false }] };
     });
   }
 
   function markAll(itemId: string) {
-    setRows((r) => ({ ...r, [itemId]: r[itemId].map((row) => ({ ...row, done: true })) }));
+    setRows((r) => ({
+      ...r,
+      [itemId]: (r[itemId] ?? blankRows[itemId] ?? []).map((row) => ({ ...row, done: true })),
+    }));
   }
 
   function collectSets(): SetInput[] {
     const sets: SetInput[] = [];
     for (const item of items) {
-      const done = rows[item.id].filter((row) => row.done);
+      const done = rowsOf(item.id).filter((row) => row.done);
       done.forEach((row, i) => {
         const w = parseNum(row.weight);
         sets.push({
@@ -355,7 +368,7 @@ export function WorkoutForm(props: Props) {
 
   /** Today's numbers for an exercise, from the sets ticked so far. */
   function totalsOf(item: WorkoutItem) {
-    const ticked = (rows[item.id] ?? [])
+    const ticked = rowsOf(item.id)
       .filter((row) => row.done)
       .map((row) => ({ weight: parseNum(row.weight), reps: parseNum(row.reps) }));
     // Last session's volume, converted into the unit the inputs use.
@@ -475,7 +488,7 @@ export function WorkoutForm(props: Props) {
                 <span className="text-center">{timeMode ? t("workout.time") : t("workout.reps")}</span>
                 <span />
               </div>
-              {rows[item.id].map((row, i) => (
+              {rowsOf(item.id).map((row, i) => (
                 <div key={i} className={cn("grid items-center gap-2", gridCols)}>
                   <div className="text-center font-medium">{i + 1}</div>
                   {!isEdit && (

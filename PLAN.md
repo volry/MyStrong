@@ -501,3 +501,22 @@ a search box.
 
 Checked in Chromium at 390px: chips filter, a pick writes the id into the hidden
 input, filtering the pick away clears it, and picking a visible one sets it again.
+
+## The crash when adding an exercise mid-workout (2026-09-22)
+
+"Add an exercise" inserted the row and then threw the whole screen into the
+error boundary — "Something went wrong" — so it looked like nothing had worked
+while in fact the exercise was added every time. Two taps left two copies.
+
+`rows` is state seeded once from `buildRows(items, …)`. `router.refresh()` after
+the insert re-renders the same component with a longer `items`, and a `useState`
+initialiser does not run again, so `rows[newItem.id]` was `undefined` and
+`rows[item.id].map(...)` threw. Every read now falls back to `blankRows`, a memo
+of `buildRows(items, previous, unit)` that follows the current day; the typed
+values in the other exercises survive because they still come from state.
+
+Found from the edge logs: two `POST /rest/v1/program_exercises` with 201, and no
+PATCH on `programs` — the insert had plainly succeeded, so the failure had to be
+after it, in rendering. Reproduced in Chromium both ways: the old build loses the
+form when an exercise arrives, the new one renders it with fresh rows and keeps
+what was already typed.
