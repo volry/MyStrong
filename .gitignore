@@ -13,12 +13,10 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
-
 # production
 /build
+/dist/
+/dev-dist/
 
 # misc
 .DS_Store
@@ -33,17 +31,23 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# vercel
-.vercel
+# Local Firebase tooling
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
-.vercel
-.env*
 
 # agent skills (reinstall with: npx skills add) and local Claude settings
 .agents/
 .claude/skills/
 .claude/settings.local.json
+
+
+# old Next.js build output
+/.next/
+# Cloud Functions dependencies
+/functions/node_modules/

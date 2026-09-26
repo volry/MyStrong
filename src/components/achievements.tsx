@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router";
 import { ChevronRight, Dumbbell, Flame, Lock, Target, Trophy } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Locale, T } from "@/i18n/dictionaries";
@@ -194,7 +194,7 @@ export function AchievementStrip({
   return (
     <div className="space-y-3 rounded-xl border p-3">
       {href ? (
-        <Link href={href} className="block">
+        <Link to={href} className="block">
           {header}
         </Link>
       ) : (

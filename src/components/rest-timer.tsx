@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
 import { Minus, Plus, X } from "lucide-react";
 import type { T } from "@/i18n/dictionaries";

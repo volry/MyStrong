@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import type { Exercise, Workout } from "@/data/types";
 import { weekStreak } from "@/lib/week";
 
 export type ProgressPoint = {
@@ -33,30 +33,35 @@ function epley(weight: number, reps: number): number {
   return reps === 1 ? weight : weight * (1 + reps / 30);
 }
 
-export async function getProgress(clientId: string): Promise<ProgressSummary> {
-  const supabase = await createClient();
-  const [{ data: workouts }, { data: sets }] = await Promise.all([
-    supabase
-      .from("workouts")
-      .select("id, performed_at")
-      .eq("client_id", clientId)
-      .eq("status", "done")
-      .order("performed_at"),
-    supabase
-      .from("set_logs")
-      .select(
-        "reps, weight, workout:workouts!inner(id, performed_at, client_id, status), program_exercise:program_exercises!inner(exercise_id, exercise:exercises(name, muscle_group))",
-      )
-      .eq("workout.client_id", clientId)
-      .eq("workout.status", "done"),
-  ]);
+export function getProgress(
+  clientId: string,
+  allWorkouts: Workout[],
+  library: Map<string, Exercise>,
+): ProgressSummary {
+  const workouts = allWorkouts
+    .filter((w) => w.client_id === clientId && w.status === "done")
+    .sort((a, b) => a.performed_at.localeCompare(b.performed_at));
+  const sets = workouts.flatMap((w) =>
+    w.sets.map((s) => {
+      const exercise = s.exercise_id ? library.get(s.exercise_id) : undefined;
+      return {
+        reps: s.reps,
+        weight: s.weight,
+        workout: { id: w.id, performed_at: w.performed_at },
+        program_exercise: {
+          exercise_id: s.exercise_id ?? s.program_exercise_id,
+          exercise: exercise ? { name: exercise.name, muscle_group: exercise.muscle_group } : null,
+        },
+      };
+    }),
+  );
 
   // exercise -> workout -> aggregate
   const byExercise = new Map<
     string,
     { name: string; muscleGroup: string | null; byWorkout: Map<string, ProgressPoint> }
   >();
-  for (const s of sets ?? []) {
+  for (const s of sets) {
     const exId = s.program_exercise.exercise_id;
     const name = s.program_exercise.exercise?.name ?? "?";
     const muscleGroup = s.program_exercise.exercise?.muscle_group ?? null;
@@ -108,7 +113,7 @@ export async function getProgress(clientId: string): Promise<ProgressSummary> {
     // Most recently trained first: that is what a person looks for on this screen.
     .sort((a, b) => (b.lastDate ?? "").localeCompare(a.lastDate ?? "") || a.name.localeCompare(b.name));
 
-  const list = workouts ?? [];
+  const list = workouts;
   const now = new Date();
   const workoutsThisMonth = list.filter((w) => {
     const d = new Date(w.performed_at);

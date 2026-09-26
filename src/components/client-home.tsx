@@ -1,9 +1,10 @@
-import Link from "next/link";
+import { useMemo } from "react";
+import { Link } from "react-router";
 import { CalendarCheck, ChevronRight, Flame, History, PencilRuler, Play, Settings2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Profile } from "@/lib/profile";
 import { makeT, type Locale, type T } from "@/i18n/dictionaries";
-import { createClient } from "@/lib/supabase/server";
+import { useData } from "@/data/store";
 import { getActiveProgram, getClientStats, type ClientStats, type ProgramDay } from "@/lib/client-data";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MuscleBadges } from "@/components/muscle-badges";
 
 /** "Today" view: next workout of the active program. Used by clients at `/` and by the coach at `/me`. */
-export async function ClientHome({
+export function ClientHome({
   locale,
   profile,
   flags,
@@ -19,24 +20,19 @@ export async function ClientHome({
 }: {
   locale: Locale;
   profile: Profile;
-  flags: { done?: string; skipped?: string };
+  flags: { done?: string | null; skipped?: string | null };
   /** Coach only: link to manage their own programs. */
   manageHref?: string;
 }) {
   const t = makeT(locale);
-  const supabase = await createClient();
-  const [data, stats, { data: last }] = await Promise.all([
-    getActiveProgram(profile.id),
-    getClientStats(profile.id),
-    supabase
-      .from("workouts")
-      .select("id, performed_at, status, program_day:program_days(week_no, day_no, title)")
-      .eq("client_id", profile.id)
-      .eq("status", "done")
-      .order("performed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  const { programs, workouts, exercises } = useData();
+  const data = useMemo(
+    () => getActiveProgram(profile.id, programs, workouts, exercises),
+    [profile.id, programs, workouts, exercises],
+  );
+  const stats = useMemo(() => getClientStats(profile.id, workouts), [profile.id, workouts]);
+  // Workouts arrive newest first.
+  const last = workouts.find((w) => w.client_id === profile.id && w.status === "done") ?? null;
 
   return (
     <div className="space-y-5">
@@ -60,7 +56,7 @@ export async function ClientHome({
             {!manageHref && (
               <>
                 <Button
-                  render={<Link href="/my-programs" />}
+                  render={<Link to="/my-programs" />}
                   variant="outline"
                   className="h-12 w-full text-base"
                 >
@@ -83,7 +79,7 @@ export async function ClientHome({
         <Card>
           <CardContent className="space-y-3 pt-6">
             <p>{t("today.allDone")}</p>
-            <Button render={<Link href="/program" />} variant="outline" className="h-12 w-full text-base">
+            <Button render={<Link to="/program" />} variant="outline" className="h-12 w-full text-base">
               {t("nav.program")}
             </Button>
           </CardContent>
@@ -102,13 +98,13 @@ export async function ClientHome({
       )}
 
       {last && (
-        <Link href={`/history/${last.id}`} className="flex items-center gap-3 rounded-xl border px-4 py-3">
+        <Link to={`/history/${last.id}`} className="flex items-center gap-3 rounded-xl border px-4 py-3">
           <div className="min-w-0 flex-1">
             <div className="text-sm text-muted-foreground">{t("today.lastWorkout")}</div>
             <div className="font-medium">
               {formatDate(last.performed_at, locale)}
-              {last.program_day
-                ? ` · ${t("prog.week", { n: last.program_day.week_no })} · ${t("prog.day", { n: last.program_day.day_no })}`
+              {last.day
+                ? ` · ${t("prog.week", { n: last.day.week_no })} · ${t("prog.day", { n: last.day.day_no })}`
                 : ""}
             </div>
           </div>
@@ -117,7 +113,7 @@ export async function ClientHome({
       )}
 
       {manageHref && (
-        <Button render={<Link href={manageHref} />} variant="outline" className="h-12 w-full text-base">
+        <Button render={<Link to={manageHref} />} variant="outline" className="h-12 w-full text-base">
           <Settings2 className="size-4" />
           {t("me.manage")}
         </Button>
@@ -234,7 +230,7 @@ function NextWorkout({
           </div>
         )}
 
-        <Button render={<Link href={`/workout/${day.id}`} />} className="h-14 w-full text-lg">
+        <Button render={<Link to={`/workout/${day.id}`} />} className="h-14 w-full text-lg">
           <Play className="size-5" fill="currentColor" />
           {t("today.start")}
         </Button>

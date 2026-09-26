@@ -1,0 +1,226 @@
+rules_version = '2';
+
+// Data model: docs/firebase-migration.md. Field names keep the snake_case of the
+// old Postgres schema so the UI code reads the same shapes it always did.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function me() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Anyone with a profile. An auth account without one (sign-up without an
+    // invite) can reach nothing but its own invite.
+    function member() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function coach() {
+      return member() && me().role == 'coach';
+    }
+
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function str(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    function optStr(value, max) {
+      return value == null || str(value, max);
+    }
+
+    // ---------- users ----------
+
+    function validPrefs(d) {
+      return optStr(d.full_name, 80)
+        && (d.unit == 'kg' || d.unit == 'lb')
+        && (d.locale == 'uk' || d.locale == 'en')
+        && d.rest_timer_sec is int && d.rest_timer_sec >= 0 && d.rest_timer_sec <= 600
+        && d.focus is map;
+    }
+
+    match /users/{uid} {
+      // Your own document is readable before it exists, so the app can wait for it.
+      allow read: if signedIn() && (request.auth.uid == uid || coach());
+
+      // Accepting an invite: the role comes from the invite, never from the client.
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && exists(/databases/$(database)/documents/invites/$(myEmail()))
+        && request.resource.data.keys().hasOnly(['email', 'full_name', 'role', 'unit', 'locale', 'rest_timer_sec', 'focus', 'created_at'])
+        && request.resource.data.email == myEmail()
+        && request.resource.data.role == get(/databases/$(database)/documents/invites/$(myEmail())).data.role
+        && str(request.resource.data.created_at, 40)
+        && validPrefs(request.resource.data);
+
+      allow update: if validPrefs(request.resource.data) && (
+        (request.auth.uid == uid && member()
+          && changed().hasOnly(['full_name', 'unit', 'locale', 'rest_timer_sec', 'focus']))
+        // A coach renames clients and records the focus metric when logging for them.
+        || (coach() && resource.data.role == 'client'
+          && changed().hasOnly(['full_name', 'focus']))
+      );
+
+      allow delete: if false;
+
+      // Web Push endpoints, read by Cloud Functions with admin rights.
+      match /push/{id} {
+        allow read, delete: if signedIn() && request.auth.uid == uid;
+        allow create, update: if member() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['endpoint', 'p256dh', 'auth', 'created_at'])
+          && str(request.resource.data.endpoint, 2000)
+          && str(request.resource.data.p256dh, 200)
+          && str(request.resource.data.auth, 200);
+      }
+    }
+
+    // ---------- invites (id = lowercase email) ----------
+
+    match /invites/{email} {
+      allow get: if signedIn() && (coach() || myEmail() == email);
+      allow list: if coach();
+      allow create: if coach()
+        && email == email.lower()
+        && request.resource.data.keys().hasOnly(['email', 'role', 'full_name', 'invited_by', 'created_at', 'accepted_at'])
+        && request.resource.data.email == email
+        && (request.resource.data.role == 'client' || request.resource.data.role == 'coach')
+        && optStr(request.resource.data.full_name, 80)
+        && request.resource.data.invited_by == request.auth.uid
+        && request.resource.data.accepted_at == null;
+      allow update: if myEmail() == email
+        && changed().hasOnly(['accepted_at'])
+        && str(request.resource.data.accepted_at, 40);
+      allow delete: if coach();
+    }
+
+    // ---------- exercise library ----------
+
+    function validExercise(d) {
+      return d.keys().hasOnly(['name', 'youtube_url', 'description', 'muscle_group', 'created_by', 'created_at'])
+        && str(d.name, 120) && d.name.size() > 0
+        && optStr(d.youtube_url, 300)
+        && optStr(d.description, 4000)
+        && optStr(d.muscle_group, 40);
+    }
+
+    match /exercises/{id} {
+      allow read: if member();
+      allow create: if member() && validExercise(request.resource.data)
+        && request.resource.data.created_by == request.auth.uid;
+      allow update: if member() && validExercise(request.resource.data)
+        && request.resource.data.created_by == resource.data.created_by
+        && (coach() || resource.data.created_by == request.auth.uid);
+      allow delete: if coach() || (member() && resource.data.created_by == request.auth.uid);
+    }
+
+    // ---------- programs (days and exercises embedded) ----------
+
+    function validProgram(d) {
+      return d.keys().hasOnly([
+          'client_id', 'created_by', 'name', 'notes', 'start_date', 'is_active', 'activated_by',
+          'review_status', 'coach_feedback', 'submitted_at', 'reviewed_at', 'reviewed_by',
+          'created_at', 'days'
+        ])
+        && str(d.client_id, 128)
+        && str(d.name, 200) && d.name.size() > 0
+        && optStr(d.notes, 4000)
+        && optStr(d.start_date, 40)
+        && d.is_active is bool
+        && d.review_status in ['approved', 'self', 'pending', 'changes_requested']
+        && d.days is list && d.days.size() <= 200;
+    }
+
+    // What a client may never touch on a program: the coach's verdict.
+    function reviewUnchanged() {
+      return !changed().hasAny(['coach_feedback', 'reviewed_at', 'reviewed_by', 'client_id', 'created_by']);
+    }
+
+    match /programs/{id} {
+      allow read: if coach() || (member() && resource.data.client_id == request.auth.uid);
+
+      allow create: if validProgram(request.resource.data) && (
+        (coach() && request.resource.data.created_by == request.auth.uid)
+        || (member()
+          && request.resource.data.client_id == request.auth.uid
+          && request.resource.data.created_by == request.auth.uid
+          && request.resource.data.review_status in ['self', 'pending']
+          && request.resource.data.coach_feedback == null
+          && request.resource.data.reviewed_at == null
+          && request.resource.data.reviewed_by == null)
+      );
+
+      allow update: if validProgram(request.resource.data) && (
+        coach()
+        // The client's own program: anything but the verdict, and no self-approval.
+        || (member()
+          && resource.data.client_id == request.auth.uid
+          && resource.data.created_by == request.auth.uid
+          && (request.resource.data.review_status in ['self', 'pending']
+            || (resource.data.review_status == 'changes_requested'
+              && request.resource.data.review_status == 'changes_requested'))
+          && reviewUnchanged())
+        // Switching to or away from the coach's program.
+        || (member()
+          && resource.data.client_id == request.auth.uid
+          && changed().hasOnly(['is_active', 'activated_by'])
+          && request.resource.data.activated_by == request.auth.uid)
+      );
+
+      allow delete: if coach()
+        || (member() && resource.data.client_id == request.auth.uid && resource.data.created_by == request.auth.uid);
+    }
+
+    // ---------- workouts (sets and notes embedded) ----------
+
+    function validWorkout(d) {
+      return d.keys().hasOnly([
+          'client_id', 'created_by', 'program_id', 'program_day_id', 'day', 'performed_at',
+          'status', 'client_comment', 'sets', 'notes', 'coach_seen_at', 'created_at'
+        ])
+        && str(d.client_id, 128)
+        && str(d.program_day_id, 128)
+        && str(d.performed_at, 40)
+        && (d.status == 'done' || d.status == 'skipped')
+        && optStr(d.client_comment, 2000)
+        && d.sets is list && d.sets.size() <= 500
+        && d.notes is list && d.notes.size() <= 200;
+    }
+
+    match /workouts/{id} {
+      allow read: if coach() || (member() && resource.data.client_id == request.auth.uid);
+      allow create: if validWorkout(request.resource.data)
+        && request.resource.data.created_by == request.auth.uid
+        && (coach() || (member() && request.resource.data.client_id == request.auth.uid));
+      allow update: if validWorkout(request.resource.data)
+        && request.resource.data.client_id == resource.data.client_id
+        && request.resource.data.created_by == resource.data.created_by
+        && (coach() || (member() && resource.data.client_id == request.auth.uid
+          && !changed().hasAny(['coach_seen_at'])));
+      allow delete: if coach() || (member() && resource.data.client_id == request.auth.uid);
+    }
+
+    // ---------- CSV export tokens (id = the secret) ----------
+
+    match /exportTokens/{token} {
+      allow read, delete: if member() && resource.data.user_id == request.auth.uid;
+      allow create: if member()
+        && token.size() >= 32
+        && request.resource.data.keys().hasOnly(['user_id', 'created_at'])
+        && request.resource.data.user_id == request.auth.uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

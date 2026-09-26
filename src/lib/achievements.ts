@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import type { Exercise, Program, Workout } from "@/data/types";
 import { isoWeekKey } from "@/lib/week";
 import { isMuscleGroup } from "@/lib/muscles";
 import type { TranslationKey } from "@/i18n/dictionaries";
@@ -267,28 +267,32 @@ export function replayAchievements(
 }
 
 /** The same, for one client, read straight from the database. */
-export async function getAchievements(clientId: string): Promise<Achievement[]> {
-  const supabase = await createClient();
-  const [{ data: workouts }, { data: sets }, { data: programs }] = await Promise.all([
-    supabase
-      .from("workouts")
-      .select("id, performed_at, program_day_id")
-      .eq("client_id", clientId)
-      .eq("status", "done")
-      .order("performed_at"),
-    supabase
-      .from("set_logs")
-      .select(
-        "reps, weight, workout:workouts!inner(id, client_id, status), program_exercise:program_exercises!inner(exercise_id, exercise:exercises(muscle_group))",
-      )
-      .eq("workout.client_id", clientId)
-      .eq("workout.status", "done"),
-    supabase.from("programs").select("id, program_days(id, week_no)").eq("client_id", clientId),
-  ]);
+export function getAchievements(
+  clientId: string,
+  workouts: Workout[],
+  programs: Program[],
+  exercises: Map<string, Exercise>,
+): Achievement[] {
+  const done = workouts
+    .filter((w) => w.client_id === clientId && w.status === "done")
+    .sort((a, b) => a.performed_at.localeCompare(b.performed_at));
+  const sets: LoggedSet[] = done.flatMap((w) =>
+    w.sets.map((s) => ({
+      reps: s.reps,
+      weight: s.weight,
+      workout: { id: w.id },
+      program_exercise: {
+        exercise_id: s.exercise_id ?? s.program_exercise_id,
+        exercise: { muscle_group: (s.exercise_id && exercises.get(s.exercise_id)?.muscle_group) || null },
+      },
+    })),
+  );
   return replayAchievements(
-    workouts ?? [],
-    sets ?? [],
-    (programs ?? []).map((p) => ({ id: p.id, program_days: p.program_days ?? [] })),
+    done,
+    sets,
+    programs
+      .filter((p) => p.client_id === clientId)
+      .map((p) => ({ id: p.id, program_days: p.days.map((d) => ({ id: d.id, week_no: d.week_no })) })),
   );
 }
 

@@ -350,3 +350,24 @@ counting as a record, volume totals, muscle groups adding up across a week,
 program weeks not counting twice when a day is repeated, and an empty log.
 
 Checked in Chromium at 390px: the strip, the full list, and the post-workout card.
+
+## Move to Firebase (2026-09-25)
+
+Why: Firebase's free tier allows many projects (Supabase: two), and the owner
+found the Firebase pilot faster than Vercel + Supabase — every tab in the old
+app was a server round trip. Decisions: Blaze plan with a $1 budget alert,
+email + password sign-in (no Google).
+
+The Next.js app became a Vite SPA; server components and server actions became
+pure selectors over an in-memory, offline-cached copy of Firestore and
+fire-and-forget writes. Programs hold their days and exercises; workouts hold
+their sets and notes. Google Drive backup (never connected) is replaced by
+Firestore scheduled backups. The `/training` pilot and its outbox are gone:
+Firestore's own persistence covers offline logging.
+
+Verified locally against the emulators with the real Supabase data: every
+screen for both roles, coach editing, invite-only sign-up (and refusal),
+Security Rules (19 tests), and on the production build: offline cold start,
+finishing a workout offline, reopening the closed app offline, and the workout
+syncing exactly once when the connection returns. Details and the cutover
+checklist: `docs/firebase-migration.md`.

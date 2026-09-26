@@ -1,8 +1,8 @@
-import type { Database } from "@/lib/database.types";
+import type { ReviewStatus } from "@/data/types";
 import type { T } from "@/i18n/dictionaries";
 import { Badge } from "@/components/ui/badge";
 
-export type ReviewStatus = Database["public"]["Enums"]["program_review"];
+export type { ReviewStatus };
 
 const VARIANT = {
   self: "outline",

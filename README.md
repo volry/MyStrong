@@ -8,16 +8,17 @@ A small gym app for one coach and her clients, installed on iPhone as a web app.
 
 ## Stack
 
-Next.js 16 (App Router) · Tailwind 4 · shadcn/ui · Supabase (Postgres, Auth, RLS) · Recharts · Vercel.
+Vite + React 19 SPA · React Router · Tailwind 4 · shadcn/ui (Base UI) · Recharts · Firebase: Hosting, Auth (email + password), Firestore with offline persistence, Cloud Functions (push, CSV export).
 
 ## Development
 
 ```bash
-npm install
-vercel env pull   # writes .env.local (Supabase URL/key, VAPID keys)
-npm run dev
+npm install && npm --prefix functions install
+npm run dev:emulators                      # Auth + Firestore emulators (JDK 21+)
+VITE_FIREBASE_EMULATORS=true npm run dev
+npm run test:rules
+npm run build
+npm run deploy                             # hosting, rules, functions
 ```
 
-Production: https://mystrong.vercel.app. Pushes to `main` deploy automatically.
-
-See `PLAN.md` for decisions and the build log.
+Firebase project: `mystrong-vvr-2026`. See `docs/firebase-migration.md` for the architecture, the data model and the cutover checklist, and `PLAN.md` for decisions and the build log.
