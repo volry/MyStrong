@@ -31,7 +31,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t("settings.title")}</h1>
+      <h1 className="text-[2rem] leading-tight font-bold">{t("settings.title")}</h1>
 
       {/* Keyed on the saved values so the fields show them after a save. */}
       <form

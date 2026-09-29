@@ -63,7 +63,7 @@ export default function ClientPage() {
     <div className="space-y-6">
       <div>
         {isSelf ? (
-          <h1 className="text-2xl font-semibold tracking-tight">{clientName}</h1>
+          <h1 className="text-[2rem] leading-tight font-bold">{clientName}</h1>
         ) : (
           <ClientName
             name={client.full_name}

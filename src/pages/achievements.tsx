@@ -29,7 +29,7 @@ export default function AchievementsPage() {
           <ChevronLeft className="size-4" />
           {t("progress.title")}
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("ach.title")}</h1>
+        <h1 className="text-[2rem] leading-tight font-bold">{t("ach.title")}</h1>
       </div>
 
       {fresh.length > 0 && (

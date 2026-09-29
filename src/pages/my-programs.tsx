@@ -40,7 +40,7 @@ export default function MyProgramsPage() {
           <ChevronLeft className="size-4" />
           {t("nav.program")}
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("mine.title")}</h1>
+        <h1 className="text-[2rem] leading-tight font-bold">{t("mine.title")}</h1>
         <p className="text-sm text-muted-foreground">{t("mine.subtitle")}</p>
       </div>
 

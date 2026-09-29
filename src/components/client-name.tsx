@@ -19,7 +19,7 @@ export function ClientName({
   if (!editing) {
     return (
       <div className="flex items-center gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{name ?? email}</h1>
+        <h1 className="text-[2rem] leading-tight font-bold">{name ?? email}</h1>
         <button
           type="button"
           onClick={() => setEditing(true)}

@@ -16,7 +16,7 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">{t("history.title")}</h1>
+      <h1 className="text-[2rem] leading-tight font-bold">{t("history.title")}</h1>
 
       {workouts.length === 0 ? (
         <p className="text-muted-foreground">{t("history.empty")}</p>

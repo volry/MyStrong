@@ -23,7 +23,7 @@ export default function EditExercisePage() {
   if (!mayEditExercise(data.me, exercise)) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight">{exercise.name}</h1>
+        <h1 className="text-[2rem] leading-tight font-bold">{exercise.name}</h1>
         <MuscleBadge group={exercise.muscle_group} t={t} />
         <YoutubeEmbed url={exercise.youtube_url} title={exercise.name} />
         {exercise.description && <p className="whitespace-pre-wrap text-sm">{exercise.description}</p>}
@@ -34,7 +34,7 @@ export default function EditExercisePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t("ex.edit")}</h1>
+      <h1 className="text-[2rem] leading-tight font-bold">{t("ex.edit")}</h1>
       <ExerciseForm key={exercise.id} locale={locale} exercise={exercise} />
 
       <form action={() => deleteExercise(data.me, exercise, data.programs)} className="border-t pt-4">

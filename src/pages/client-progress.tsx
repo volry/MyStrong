@@ -33,7 +33,7 @@ export default function ClientProgressPage() {
           <ChevronLeft className="size-4" />
           {client.full_name ?? client.email}
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("progress.title")}</h1>
+        <h1 className="text-[2rem] leading-tight font-bold">{t("progress.title")}</h1>
       </div>
       <AchievementStrip achievements={achievements} t={t} unit={coach.unit} locale={locale} />
       <ProgressView summary={summary} unit={coach.unit} locale={locale} />

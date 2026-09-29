@@ -349,7 +349,7 @@ export function WorkoutForm(props: Props) {
   }
 
   const inputClass =
-    "h-11 w-full rounded-lg border border-input bg-background px-1 text-center text-base tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+    "h-12 w-full rounded-lg border border-input bg-background px-1 text-center text-xl tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   const gridCols = isEdit
     ? "grid-cols-[2rem_1fr_1fr_2.75rem]"
     : "grid-cols-[2rem_3.75rem_1fr_1fr_2.75rem]";
@@ -384,11 +384,11 @@ export function WorkoutForm(props: Props) {
           <Card key={item.id}>
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between gap-2">
-                <CardTitle className="text-base">
+                <CardTitle className="text-xl leading-tight">
                   <button
                     type="button"
                     onClick={() => item.exercise && setSheet({ itemId: item.id, tab: "about" })}
-                    className="text-left text-primary underline-offset-4 hover:underline"
+                    className="text-left underline-offset-4 hover:underline"
                   >
                     {idx + 1}. {item.exercise?.name}
                   </button>
@@ -455,7 +455,7 @@ export function WorkoutForm(props: Props) {
                     value={row.weight}
                     onChange={(e) => updateRow(item.id, i, { weight: e.target.value })}
                     onFocus={selectOnFocus}
-                    className={cn(inputClass, row.done && "bg-primary/10")}
+                    className={cn(inputClass, row.done && "border-plate-green/50 bg-plate-green/15")}
                     aria-label={`${t("workout.set")} ${i + 1} ${t("workout.weight")}`}
                   />
                   <input
@@ -467,7 +467,7 @@ export function WorkoutForm(props: Props) {
                       updateRow(item.id, i, timeMode ? { time: e.target.value } : { reps: e.target.value })
                     }
                     onFocus={selectOnFocus}
-                    className={cn(inputClass, row.done && "bg-primary/10")}
+                    className={cn(inputClass, row.done && "border-plate-green/50 bg-plate-green/15")}
                     aria-label={`${t("workout.set")} ${i + 1} ${timeMode ? t("workout.time") : t("workout.reps")}`}
                   />
                   <button
@@ -475,9 +475,9 @@ export function WorkoutForm(props: Props) {
                     onClick={() => toggleDone(item.id, i, !row.done)}
                     aria-pressed={row.done}
                     className={cn(
-                      "flex h-11 w-11 items-center justify-center rounded-lg border transition-colors",
+                      "flex h-12 w-12 items-center justify-center rounded-lg border transition-colors",
                       row.done
-                        ? "border-primary bg-primary text-primary-foreground"
+                        ? "border-plate-green bg-plate-green text-white"
                         : "border-input text-muted-foreground",
                     )}
                   >

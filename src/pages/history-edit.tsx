@@ -78,7 +78,7 @@ export default function EditWorkoutPage() {
           <ChevronLeft className="size-4" />
           {formatDate(w.performed_at, locale)}
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("history.edit")}</h1>
+        <h1 className="text-[2rem] leading-tight font-bold">{t("history.edit")}</h1>
         {w.day && (
           <p className="text-muted-foreground">
             {t("prog.week", { n: w.day.week_no })} · {t("prog.day", { n: w.day.day_no })}

@@ -61,7 +61,7 @@ export default function WorkoutPage() {
           <ChevronLeft className="size-4" />
           {forClient ? owner.name : program.name}
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-[2rem] leading-tight font-bold">
           {t("prog.week", { n: day.week_no })} · {t("prog.day", { n: day.day_no })}
         </h1>
         {day.title && <p className="text-muted-foreground">{day.title}</p>}

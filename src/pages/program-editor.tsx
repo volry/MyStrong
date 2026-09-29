@@ -73,7 +73,7 @@ export default function ProgramPage() {
           {clientName}
         </Link>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{program.name}</h1>
+          <h1 className="text-[2rem] leading-tight font-bold">{program.name}</h1>
           {program.is_active && <Badge>{t("client.active")}</Badge>}
           {clientMade && <ReviewBadge status={program.review_status} t={t} />}
         </div>

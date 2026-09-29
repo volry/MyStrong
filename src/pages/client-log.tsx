@@ -36,7 +36,7 @@ export default function ClientLogPage() {
           <ChevronLeft className="size-4" />
           {clientName}
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("coach.logFor", { name: clientName })}</h1>
+        <h1 className="text-[2rem] leading-tight font-bold">{t("coach.logFor", { name: clientName })}</h1>
         {data && <p className="text-muted-foreground">{data.program.name}</p>}
       </div>
 
@@ -57,7 +57,7 @@ export default function ClientLogPage() {
                       className={cn("flex items-center gap-3 px-4 py-3", isNext && "bg-primary/5")}
                     >
                       {doneAt ? (
-                        <span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <span className="flex size-7 items-center justify-center rounded-full bg-plate-green text-white">
                           <Check className="size-4" strokeWidth={3} />
                         </span>
                       ) : (

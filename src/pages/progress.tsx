@@ -20,7 +20,7 @@ export default function ProgressPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">{t("progress.title")}</h1>
+      <h1 className="text-[2rem] leading-tight font-bold">{t("progress.title")}</h1>
       <AchievementStrip
         achievements={achievements}
         t={t}

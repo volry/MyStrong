@@ -17,10 +17,10 @@ import { cn } from "@/lib/utils";
 
 /** A colour and a face per family, so a badge is recognisable before it is read. */
 const LOOK: Record<AchievementCategory, { icon: LucideIcon; earned: string }> = {
-  consistency: { icon: Flame, earned: "bg-amber-100 text-amber-900" },
-  records: { icon: Trophy, earned: "bg-violet-100 text-violet-800" },
-  volume: { icon: Dumbbell, earned: "bg-blue-100 text-blue-800" },
-  program: { icon: Target, earned: "bg-sky-100 text-sky-800" },
+  consistency: { icon: Flame, earned: "bg-plate-yellow text-primary-foreground" },
+  records: { icon: Trophy, earned: "bg-plate-red text-white" },
+  volume: { icon: Dumbbell, earned: "bg-plate-blue text-white" },
+  program: { icon: Target, earned: "bg-plate-green text-white" },
 };
 
 /** The badge's name; weight and volume badges carry their threshold. */

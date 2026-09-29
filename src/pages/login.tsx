@@ -62,8 +62,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,oklch(0.9_0.05_175),transparent_60%)] px-6 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-      <div className="w-full max-w-sm rounded-2xl bg-card p-6 shadow-[0_8px_30px_oklch(0.34_0.075_180/10%)]">
+    <main className="flex min-h-dvh flex-col items-center justify-center px-6 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+      <div className="w-full max-w-sm rounded-2xl bg-card p-6 ring-1 ring-border">
         <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
           <Dumbbell className="size-8" />
         </div>

@@ -8,7 +8,7 @@ export default function NewExercisePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">{t("ex.add")}</h1>
+      <h1 className="text-[2rem] leading-tight font-bold">{t("ex.add")}</h1>
       <ExerciseForm locale={locale} />
     </div>
   );

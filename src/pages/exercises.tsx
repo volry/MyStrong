@@ -52,7 +52,7 @@ export default function ExercisesPage() {
         </Link>
       )}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("ex.title")}</h1>
+        <h1 className="text-[2rem] leading-tight font-bold">{t("ex.title")}</h1>
         <Button render={<Link to="/exercises/new" />} size="sm">
           <Plus className="size-4" />
           {t("ex.add")}

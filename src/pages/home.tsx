@@ -67,7 +67,7 @@ function CoachHome({ t, locale, params }: { t: T; locale: Locale; params: Search
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t("coach.clients")}</h1>
+      <h1 className="text-[2rem] leading-tight font-bold">{t("coach.clients")}</h1>
 
       <div className="space-y-6 md:grid md:grid-cols-[1fr_360px] md:items-start md:gap-8 md:space-y-0">
       <div className="space-y-6">

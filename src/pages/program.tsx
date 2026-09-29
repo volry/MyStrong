@@ -34,7 +34,7 @@ export default function ProgramPage() {
   if (!data) {
     return (
       <div className="space-y-5">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("program.title")}</h1>
+        <h1 className="text-[2rem] leading-tight font-bold">{t("program.title")}</h1>
         <p className="text-muted-foreground">{t("program.none")}</p>
         {ownProgramsLink}
       </div>
@@ -52,7 +52,7 @@ export default function ProgramPage() {
     <div className="space-y-5">
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{data.program.name}</h1>
+          <h1 className="text-[2rem] leading-tight font-bold">{data.program.name}</h1>
           {data.program.created_by === profile.id && (
             <ReviewBadge status={data.program.review_status} t={t} />
           )}
@@ -78,7 +78,7 @@ export default function ProgramPage() {
                     className={cn("flex items-center gap-3 px-4 py-3", isNext && "bg-primary/5")}
                   >
                     {doneAt ? (
-                      <span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <span className="flex size-7 items-center justify-center rounded-full bg-plate-green text-white">
                         <Check className="size-4" strokeWidth={3} />
                       </span>
                     ) : (

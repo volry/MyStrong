@@ -58,7 +58,7 @@ export default function WorkoutDetailPage() {
           {isOwner ? t("history.title") : (client?.full_name ?? client?.email)}
         </Link>
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{formatDate(w.performed_at, locale)}</h1>
+          <h1 className="text-[2rem] leading-tight font-bold">{formatDate(w.performed_at, locale)}</h1>
           {w.status === "skipped" && <Badge variant="secondary">{t("history.skipped")}</Badge>}
         </div>
         {w.day && (
