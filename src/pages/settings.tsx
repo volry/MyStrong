@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PushToggle } from "@/components/push-toggle";
 import { ExportSection } from "@/components/export-section";
+import { ThemePicker } from "@/components/theme-picker";
 
 export default function SettingsPage() {
   const { me: profile } = useData();
@@ -32,6 +33,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-[2rem] leading-tight font-bold">{t("settings.title")}</h1>
+
+      <ThemePicker t={t} />
 
       {/* Keyed on the saved values so the fields show them after a save. */}
       <form

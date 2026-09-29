@@ -237,7 +237,7 @@ function NextWorkout({
 
       <Button
         render={<Link to={`/workout/${day.id}`} />}
-        className="mt-5 h-14 w-full bg-primary-foreground text-lg text-primary hover:bg-primary-foreground/90"
+        className="mt-5 h-14 w-full bg-primary-foreground text-lg text-plate-yellow hover:bg-primary-foreground/90"
       >
         <Play className="size-5" fill="currentColor" />
         {t("today.start")}

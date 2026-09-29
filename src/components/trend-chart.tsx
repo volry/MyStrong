@@ -12,9 +12,9 @@ import {
 import type { Locale } from "@/i18n/dictionaries";
 
 // Same validated series colour as the progress screen (dataviz palette, light surface).
-const SERIES = "#F2C230";
-const GRID = "#33383E";
-const AXIS_TEXT = "#9AA0A6";
+const SERIES = "var(--chart-1)";
+const GRID = "var(--border)";
+const AXIS_TEXT = "var(--muted-foreground)";
 
 export type TrendPoint = { date: string; value: number };
 
@@ -62,7 +62,7 @@ export function TrendChart({
                 stroke={SERIES}
                 strokeWidth={2}
                 dot={{ r: 4, fill: SERIES, strokeWidth: 0 }}
-                activeDot={{ r: 6, stroke: "#17191C", strokeWidth: 2 }}
+                activeDot={{ r: 6, stroke: "var(--background)", strokeWidth: 2 }}
                 isAnimationActive={false}
               />
             </LineChart>
