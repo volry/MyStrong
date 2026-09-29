@@ -18,7 +18,8 @@ npm run dev:emulators                      # Auth + Firestore emulators (JDK 21+
 VITE_FIREBASE_EMULATORS=true npm run dev
 npm run test:rules
 npm run build
-npm run deploy                             # hosting, rules, functions
+npm run deploy                             # app + Security Rules
+npm run deploy:functions                   # Cloud Functions (only when functions/ changed)
 ```
 
 Firebase project: `mystrong-vvr-2026`. See `docs/firebase-migration.md` for the architecture, the data model and the cutover checklist, and `PLAN.md` for decisions and the build log.

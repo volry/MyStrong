@@ -84,7 +84,7 @@ Moving the data:
    `firebase auth:import users.json --hash-algo=BCRYPT`, uid = Supabase id, so
    everyone keeps their password. (Alternative: import without hashes and use
    "Forgot password?".) Keep the export out of the repository and delete it after.
-7. `npm run deploy` (hosting, rules, functions).
+7. `npm run deploy` (hosting, rules) and `npm run deploy:functions`.
 8. Check on the iPhone: sign in, log a workout in airplane mode, close the app,
    reopen, reconnect; coach sees it and gets a push.
 9. Point `mystrong.vercel.app` at the new address (a redirect), tell everyone to
