@@ -33,7 +33,7 @@ export default function AchievementsPage() {
       </div>
 
       {fresh.length > 0 && (
-        <div className="space-y-3 rounded-xl border border-primary bg-primary/5 p-4">
+        <div className="space-y-4 rounded-2xl border border-primary bg-primary/5 p-4">
           <div className="flex items-center gap-2">
             <PartyPopper className="size-5 text-primary" />
             <div>
@@ -41,9 +41,9 @@ export default function AchievementsPage() {
               <p className="text-sm text-muted-foreground">{t("ach.unlockedNow", { n: fresh.length })}</p>
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {fresh.map((a) => (
-              <AchievementRow key={a.id} a={a} t={t} unit={profile.unit} locale={locale} highlight />
+              <AchievementRow key={a.id} a={a} t={t} unit={profile.unit} locale={locale} />
             ))}
           </div>
           <Button render={<Link to={profile.role === "coach" ? "/me" : "/"} />} className="h-11 w-full text-base">
@@ -57,7 +57,6 @@ export default function AchievementsPage() {
         t={t}
         unit={profile.unit}
         locale={locale}
-        highlight={fresh.map((a) => a.id)}
       />
     </div>
   );
