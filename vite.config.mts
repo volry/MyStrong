@@ -31,6 +31,8 @@ export default defineConfig({
       injectRegister: false,
       injectManifest: {
         globPatterns: ["**/*.{js,css,html,png,svg,woff2}"],
+        // Geist ships every alphabet in one stylesheet; the phone only needs these offline.
+        globIgnores: ["**/*-greek*", "**/*-vietnamese*"],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       manifest: {

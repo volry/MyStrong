@@ -2,8 +2,11 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
-@import "@fontsource/fira-sans-extra-condensed/500.css";
-@import "@fontsource/fira-sans-extra-condensed/700.css";
+/* Only the alphabets the app speaks: Ukrainian and English. */
+@import "@fontsource/fira-sans-extra-condensed/cyrillic-500.css";
+@import "@fontsource/fira-sans-extra-condensed/latin-500.css";
+@import "@fontsource/fira-sans-extra-condensed/cyrillic-700.css";
+@import "@fontsource/fira-sans-extra-condensed/latin-700.css";
 
 @custom-variant dark (&:is(.dark *));
 /* Classes that only apply in the light "Chalk" theme, e.g. `light:text-rose-700`. */
