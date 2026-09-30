@@ -65,11 +65,34 @@ function listen<T>(
   );
 }
 
+const ROLE_KEY = (uid: string) => `mystrong:role:${uid}`;
+
+/** The role this phone last saw the server confirm, so the app also opens offline. */
+function rememberedRole(uid: string): User["role"] | null {
+  try {
+    const role = localStorage.getItem(ROLE_KEY(uid));
+    return role === "coach" || role === "client" ? role : null;
+  } catch {
+    return null;
+  }
+}
+
 const withId = <T,>(id: string, data: DocumentData) => ({ ...(data as T), id });
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<AuthUser | null | undefined>(undefined);
-  const [profile, setProfile] = useState<{ uid: string; doc: User | null; cached: boolean } | null>(null);
+  const [profile, setProfile] = useState<{
+    uid: string;
+    doc: User | null;
+    cached: boolean;
+  } | null>(null);
+  /**
+   * The role as the server knows it. The rules read the role from the server's
+   * copy of the profile, so a brand-new account must not start listening while
+   * its profile exists only on the phone: those reads would be refused. Once
+   * known it sticks, so an unsent settings change never pauses the app.
+   */
+  const [serverRole, setServerRole] = useState<{ uid: string; role: User["role"] } | null>(null);
 
   const [users, setUsers] = useState<Coll<User>>(null);
   const [invites, setInvites] = useState<Coll<Invite>>(null);
@@ -89,12 +112,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const stop = onSnapshot(
       doc(db, "users", uid),
       { includeMetadataChanges: true },
-      (snap) =>
-        setProfile({
-          uid,
-          doc: snap.exists() ? withId<UserDoc>(snap.id, snap.data()) : null,
-          cached: snap.metadata.fromCache,
-        }),
+      (snap) => {
+        const doc = snap.exists() ? withId<UserDoc>(snap.id, snap.data()) : null;
+        setProfile({ uid, doc, cached: snap.metadata.fromCache });
+        const confirmed = doc && !snap.metadata.hasPendingWrites ? doc.role : rememberedRole(uid);
+        if (confirmed) {
+          setServerRole((known) => (known?.uid === uid && known.role === confirmed ? known : { uid, role: confirmed }));
+          try {
+            localStorage.setItem(ROLE_KEY(uid), confirmed);
+          } catch {
+            // storage is optional
+          }
+        }
+      },
       // Right after an account is created the read can be refused before the
       // new token reaches Firestore. A failed listener stays dead, so listen again.
       (e) => {
@@ -109,11 +139,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
   }, [uid, profileAttempt]);
 
-  const role = profile?.uid === uid ? profile?.doc?.role : undefined;
+  const role = serverRole && serverRole.uid === uid ? serverRole.role : undefined;
+  const [dataAttempt, setDataAttempt] = useState(0);
   useEffect(() => {
     if (!uid || !role) return;
     const coach = role === "coach";
-    const fail = (e: Error) => console.error("[data]", e);
+    // A refused listener never recovers; start them all again shortly.
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const fail = (e: Error) => {
+      console.warn("[data]", (e as { code?: string }).code ?? e);
+      if (retry === undefined) retry = setTimeout(() => setDataAttempt((n) => n + 1), 2000);
+    };
     const own = <T,>(name: string) =>
       coach ? collection(db, name) : query(collection(db, name), where("client_id", "==", uid)) as Query<T>;
     const stops = [
@@ -128,6 +164,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
     return () => {
       stops.forEach((stop) => stop());
+      clearTimeout(retry);
       setUsers(null);
       setInvites(null);
       setExercises(null);
@@ -135,7 +172,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setWorkouts(null);
       setTokens(null);
     };
-  }, [uid, role]);
+  }, [uid, role, dataAttempt]);
 
   const session = useMemo<Session>(() => {
     if (authUser === undefined) return { status: "loading" };
