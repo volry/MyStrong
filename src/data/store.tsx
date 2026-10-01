@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { onAuthStateChanged, type User as AuthUser } from "firebase/auth";
 import {
   collection,
@@ -141,14 +141,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const role = serverRole && serverRole.uid === uid ? serverRole.role : undefined;
   const [dataAttempt, setDataAttempt] = useState(0);
+  const failures = useRef(0);
   useEffect(() => {
     if (!uid || !role) return;
     const coach = role === "coach";
-    // A refused listener never recovers; start them all again shortly.
+    // A refused listener never recovers, so start them all again, waiting
+    // longer each time (2 s, 4 s … 1 min). What is on screen stays meanwhile.
     let retry: ReturnType<typeof setTimeout> | undefined;
     const fail = (e: Error) => {
       console.warn("[data]", (e as { code?: string }).code ?? e);
-      if (retry === undefined) retry = setTimeout(() => setDataAttempt((n) => n + 1), 2000);
+      if (retry !== undefined) return;
+      const wait = Math.min(60_000, 2000 * 2 ** failures.current);
+      failures.current += 1;
+      retry = setTimeout(() => setDataAttempt((n) => n + 1), wait);
     };
     // A coach sees their own clients (and their own training); a client sees themself.
     const own = (name: string) =>
@@ -168,14 +173,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return () => {
       stops.forEach((stop) => stop());
       clearTimeout(retry);
+    };
+  }, [uid, role, dataAttempt]);
+
+  // Another account or role: forget the previous one's data and its failures.
+  useEffect(
+    () => () => {
+      failures.current = 0;
       setUsers(null);
       setInvites(null);
       setExercises(null);
       setPrograms(null);
       setWorkouts(null);
       setTokens(null);
-    };
-  }, [uid, role, dataAttempt]);
+    },
+    [uid, role],
+  );
 
   const session = useMemo<Session>(() => {
     if (authUser === undefined) return { status: "loading" };
