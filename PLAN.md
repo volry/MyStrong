@@ -351,6 +351,176 @@ program weeks not counting twice when a day is repeated, and an empty log.
 
 Checked in Chromium at 390px: the strip, the full list, and the post-workout card.
 
+## Typography (2026-09-17)
+
+Two problems, one visible, one not:
+
+- `--font-sans` was defined as `var(--font-sans)` — a self-reference dating to the
+  first commit. It never resolved, so `font-sans` fell through to the browser
+  default and the whole app rendered in a **serif**, while the layout was loading
+  Geist for nothing. It now names `--font-geist-sans` with a system stack behind it.
+- The type scale was one step below what a phone held at arm's length in a gym
+  wants. Tailwind's `--text-*` variables are overridden once in `@theme`: xs 13,
+  sm 15, base 17, lg 19, xl 21, 2xl 26, with matching line heights, and `body`
+  set to 17px for text that carries no size class. Spacing is untouched — only
+  the type grows, so no screen re-flows.
+
+Geist is wider than the serif it replaced, which broke two places that were sized
+around the old metrics:
+
+- The tab bar's longest label ("Налаштування") no longer fit a fifth of the
+  screen. Labels are now `min(10px, 2.6vw)` with tight tracking — whole down to
+  360px, and truncation only as a last resort below that.
+- The workout grid's "previous" column (3.75rem) cut "102.5 × 12"; it is 5rem now,
+  which the weight and reps inputs can spare.
+
+Checked in Chromium at 390 / 360 / 320px: program list, workout grid, achievements
+strip and rows, tab bar — no horizontal overflow, no clipped labels.
+
+## Adding an exercise from the workout screen (2026-09-17)
+
+A client could already edit a program they wrote themselves, but only through
+Program → "My programs" → the program → the day. Mid-workout, with a barbell
+waiting, that path does not exist. Two ways in now:
+
+- **On the workout screen**, under the exercise cards: pick from the library and
+  the exercise is added to that day of the program — not just to today's session,
+  so it is there next time as well. `addExerciseToDay` refuses politely when the
+  plan was written by a coach ("only they can change it") or is out for review;
+  a coach may add to any program, as their RLS already allows. An approved
+  program drops to `self` on the first change, the same rule the day editor uses.
+  The link "Edit this day" sits next to it for targets, order and removal.
+- **On the Program tab**, each day of a program the client wrote gets a pencil
+  that opens the day editor directly.
+
+The workout draft in localStorage is keyed by `program_exercise` id and only
+restores ids that still exist, so a refresh after adding keeps everything typed
+so far and gives the new exercise fresh rows.
+
+Removal now checks first: `set_logs` hang off `program_exercises`, so deleting a
+row that has logged sets would take that history with it. The day editor refuses
+with a message and points at days not yet trained. (The coach's own day editor
+still deletes without that check — a follow-up.)
+
+## "Start the workout" (2026-09-18)
+
+The screen had a finish and no beginning: you opened a day and typed. Now a
+primary button starts the session, and a sticky bar at the top of the screen
+counts the time while you scroll through the exercises — the shape Strong uses.
+
+- The start time lives in the localStorage draft next to the rows, so locking the
+  phone, leaving the app, or reloading mid-session keeps the clock honest.
+- The bar recomputes from the timestamp on every tick rather than counting
+  seconds, so a slept phone shows the right number when it wakes.
+- `finishWorkout` takes `startedAt` and writes it to `performed_at`: a workout
+  belongs to the moment it began, not the moment it was saved. `performedAtFrom`
+  ignores a start time in the future or more than 12 hours old (a session left
+  open overnight), and falls back to the database default.
+- Nothing is required: without tapping start, everything behaves as before.
+
+No schema change. Showing the duration in history would need a column
+(`workouts.duration_sec`, or reading `created_at - performed_at`) — a follow-up.
+
+## Workout duration in the database (2026-09-18)
+
+Migration `workouts_duration_sec` (applied through the Supabase connector, as
+always — it lives in the project's migration history, not in this repo):
+
+```sql
+alter table public.workouts
+  add column duration_sec integer,
+  add constraint workouts_duration_sec_sane
+    check (duration_sec is null or (duration_sec > 0 and duration_sec <= 43200));
+```
+
+- `finishWorkout` measures from the "Start the workout" tap to the save and
+  writes both `performed_at` (the start) and `duration_sec`. Under a minute is
+  treated as a mis-tap and left null, as is a session older than 12 hours.
+- Null means the clock was never started, so every workout logged before today
+  stays null and every screen simply omits the duration.
+- Shown on the history list, the workout detail (a badge next to the date), and
+  the coach's recent-workouts list. `formatDuration` prints "52 хв" / "1 год 05 хв".
+- No column-level grants on `workouts`, so `authenticated` reaches the new column
+  and the existing row policies still decide who may write it. Verified on the
+  live database inside a rolled-back transaction: as the client, insert 3120 and
+  update to 3600 both succeed, and 999999 is rejected by the check constraint.
+- The Google Sheets export (`export_sets`) still returns set rows only; adding
+  duration there would mean changing the function and the sheet's columns.
+
+## Warm-up and cool-down as text (2026-09-18)
+
+A day can carry a warm-up and a cool-down written as plain lines — "10 присідань
+/ рол на спину / потягнути стегно". They are read, never logged: no sets, no
+weights, nothing to tick, because counting a foam roll is not the point.
+
+Migration `program_days_warmup_cooldown`:
+
+```sql
+alter table public.program_days
+  add column warmup text,
+  add column cooldown text,
+  add constraint program_days_warmup_length check (warmup is null or char_length(warmup) <= 2000),
+  add constraint program_days_cooldown_length check (cooldown is null or char_length(cooldown) <= 2000);
+```
+
+- Both day editors (the coach's and the client's own) gained two textareas next
+  to the day title, sharing `DayBlocks`; `form.text()` trims and caps at the
+  2000 the column allows, so a paste can never hit the constraint.
+- The workout screen renders the warm-up above the first exercise and the
+  cool-down below the last one, as a bulleted list of the non-empty lines.
+  Empty blocks render nothing at all.
+- Duplicating a week and copying a program carry the text with the day; without
+  that, week two of a duplicated program would silently lose its warm-up.
+- Verified on the live database in a rolled-back transaction: the client writes
+  three lines to a day of their own program, touches zero rows on the coach's
+  day, and 2100 characters are refused by the check.
+
+## Picking an exercise (2026-09-18)
+
+Adding an exercise meant scrolling a `<select>` of seventy names — unusable on a
+phone between sets. `ExercisePicker` replaces it everywhere a single exercise is
+chosen: the workout screen, the client's day editor and the coach's mobile day
+editor.
+
+- Search by name, plus a chip per muscle group — only the groups the library
+  actually covers, so the row stays short.
+- Rows carry the group in its own colour (the same `MUSCLE_BADGE` tints as the
+  rest of the app), the list scrolls inside `max-h-64`, and the count below says
+  how many the filters left.
+- The chosen id rides in a hidden input, so it drops into the existing server
+  action forms in place of the `<select>`; the workout screen drives it with
+  `value`/`onChange` instead.
+- Narrowing the filters clears a selection they hide, so "Add" can never take an
+  exercise that is no longer on screen. Done in the filter handlers rather than
+  an effect, which the React Compiler lint rules reject.
+- `ex.count` now reads "Вправ: 3" rather than "3 вправ", which is wrong Ukrainian
+  at most numbers.
+
+The coach's desktop side panel keeps its own one-tap-add list, which already had
+a search box.
+
+Checked in Chromium at 390px: chips filter, a pick writes the id into the hidden
+input, filtering the pick away clears it, and picking a visible one sets it again.
+
+## The crash when adding an exercise mid-workout (2026-09-22)
+
+"Add an exercise" inserted the row and then threw the whole screen into the
+error boundary — "Something went wrong" — so it looked like nothing had worked
+while in fact the exercise was added every time. Two taps left two copies.
+
+`rows` is state seeded once from `buildRows(items, …)`. `router.refresh()` after
+the insert re-renders the same component with a longer `items`, and a `useState`
+initialiser does not run again, so `rows[newItem.id]` was `undefined` and
+`rows[item.id].map(...)` threw. Every read now falls back to `blankRows`, a memo
+of `buildRows(items, previous, unit)` that follows the current day; the typed
+values in the other exercises survive because they still come from state.
+
+Found from the edge logs: two `POST /rest/v1/program_exercises` with 201, and no
+PATCH on `programs` — the insert had plainly succeeded, so the failure had to be
+after it, in rendering. Reproduced in Chromium both ways: the old build loses the
+form when an exercise arrives, the new one renders it with fresh rows and keeps
+what was already typed.
+
 ## Move to Firebase (2026-09-25)
 
 Why: Firebase's free tier allows many projects (Supabase: two), and the owner
