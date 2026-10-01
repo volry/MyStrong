@@ -1,10 +1,10 @@
-// Generates the app icons (teal square with a white dumbbell) without any dependencies.
+// Generates the app icons (graphite square, dumbbell in 15 kg plate yellow) without any dependencies.
 // Run: node scripts/gen-icons.mjs
 import { deflateSync } from "node:zlib";
 import { mkdirSync, writeFileSync } from "node:fs";
 
-const BG = [15, 118, 110]; // #0f766e
-const FG = [255, 255, 255];
+const BG = [23, 25, 28]; // #17191c, the gym floor
+const FG = [242, 194, 48]; // #f2c230, the 15 kg plate
 const SS = 4; // supersampling per axis
 
 function crc32(buf) {

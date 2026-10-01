@@ -1,7 +1,5 @@
-"use client";
-
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link } from "react-router";
+import { useLocation } from "react-router";
 import { CalendarDays, Dumbbell, History, Home, Settings, TrendingUp, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +22,7 @@ const ICONS = {
 };
 
 export function TabBar({ items }: { items: TabItem[] }) {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
@@ -37,7 +35,7 @@ export function TabBar({ items }: { items: TabItem[] }) {
           return (
             <li key={item.href} className="flex-1">
               <Link
-                href={item.href}
+                to={item.href}
                 className={cn(
                   "flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
                   active ? "text-primary" : "text-muted-foreground",

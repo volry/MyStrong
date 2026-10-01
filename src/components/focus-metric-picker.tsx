@@ -1,5 +1,3 @@
-"use client";
-
 import { Dialog } from "@base-ui/react/dialog";
 import { Check } from "lucide-react";
 import type { T } from "@/i18n/dictionaries";

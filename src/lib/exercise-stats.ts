@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import type { Workout } from "@/data/types";
 
 export type ExerciseSet = {
   set_no: number;
@@ -40,28 +40,34 @@ function epley(weight: number, reps: number): number {
 
 /**
  * Everything the exercise sheet shows, for the exercises of one day at once:
- * past sessions with their sets, and personal records. One query, so opening
- * the sheet during a workout costs nothing.
+ * past sessions with their sets, and personal records. Computed from the log
+ * already in memory, so opening the sheet during a workout costs nothing.
  */
-export async function getExerciseStats(
+export function getExerciseStats(
   clientId: string,
+  workouts: Workout[],
   exerciseIds: string[],
-): Promise<Record<string, ExerciseStats>> {
+): Record<string, ExerciseStats> {
   const ids = [...new Set(exerciseIds)];
   if (ids.length === 0) return {};
-
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("set_logs")
-    .select(
-      "set_no, reps, weight, time_sec, workout:workouts!inner(id, performed_at, client_id, status), program_exercise:program_exercises!inner(exercise_id)",
-    )
-    .eq("workout.client_id", clientId)
-    .eq("workout.status", "done")
-    .in("program_exercise.exercise_id", ids);
+  const wanted = new Set(ids);
+  const data = workouts
+    .filter((w) => w.client_id === clientId && w.status === "done")
+    .flatMap((w) =>
+      w.sets
+        .filter((s) => s.exercise_id != null && wanted.has(s.exercise_id))
+        .map((s) => ({
+          set_no: s.set_no,
+          reps: s.reps,
+          weight: s.weight,
+          time_sec: s.time_sec,
+          workout: { id: w.id, performed_at: w.performed_at },
+          program_exercise: { exercise_id: s.exercise_id! },
+        })),
+    );
 
   const byExercise: Record<string, Map<string, ExerciseSession>> = {};
-  for (const row of data ?? []) {
+  for (const row of data) {
     const exerciseId = row.program_exercise.exercise_id;
     const sessions = (byExercise[exerciseId] ??= new Map());
     const session = sessions.get(row.workout.id) ?? {

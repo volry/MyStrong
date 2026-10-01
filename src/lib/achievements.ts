@@ -1,6 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import type { Exercise, Program, Workout } from "@/data/types";
 import { isoWeekKey } from "@/lib/week";
-import { isMuscleGroup } from "@/lib/muscles";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 export type AchievementCategory = "consistency" | "records" | "volume" | "program";
@@ -17,14 +16,20 @@ export type AchievementMetric =
   | "tonnage"
   | "dayVolume"
   | "exercises"
-  | "weekGroups"
   | "programWeeks"
   | "programsDone";
+
+/**
+ * How heavy a badge is, drawn as the plate of that weight: 5 kg white, then the
+ * competition colours 10 green, 15 yellow, 20 blue, 25 red, and chrome on top.
+ */
+export type AchievementTier = 1 | 2 | 3 | 4 | 5 | 6;
 
 export type Achievement = {
   id: string;
   category: AchievementCategory;
   metric: AchievementMetric;
+  tier: AchievementTier;
   /** Name of the badge; weight and volume ones take the target as a variable. */
   name: TranslationKey;
   target: number;
@@ -38,40 +43,55 @@ export type Achievement = {
 
 type Def = Omit<Achievement, "value" | "unlockedAt" | "unlockedBy">;
 
-/** Thresholds are written so the Ukrainian names below stay grammatical. */
+/**
+ * Ladders that take months, not a week: a record has to be a real one, a week
+ * only counts toward a streak with two workouts in it, and tonnage is counted
+ * in hundreds of tonnes. Thresholds keep the Ukrainian names grammatical.
+ */
 const DEFS: Def[] = [
-  { id: "first", category: "consistency", metric: "workouts", target: 1, name: "ach.first" },
-  { id: "w10", category: "consistency", metric: "workouts", target: 10, name: "ach.w10" },
-  { id: "w25", category: "consistency", metric: "workouts", target: 25, name: "ach.w25" },
-  { id: "w50", category: "consistency", metric: "workouts", target: 50, name: "ach.w50" },
-  { id: "w100", category: "consistency", metric: "workouts", target: 100, name: "ach.w100" },
-  { id: "s2", category: "consistency", metric: "streak", target: 2, name: "ach.s2" },
-  { id: "s4", category: "consistency", metric: "streak", target: 4, name: "ach.s4" },
-  { id: "s8", category: "consistency", metric: "streak", target: 8, name: "ach.s8" },
-  { id: "s12", category: "consistency", metric: "streak", target: 12, name: "ach.s12" },
-  { id: "s26", category: "consistency", metric: "streak", target: 26, name: "ach.s26" },
+  { id: "first", category: "consistency", metric: "workouts", tier: 1, target: 1, name: "ach.first" },
+  { id: "w25", category: "consistency", metric: "workouts", tier: 2, target: 25, name: "ach.workouts" },
+  { id: "w50", category: "consistency", metric: "workouts", tier: 3, target: 50, name: "ach.workouts" },
+  { id: "w100", category: "consistency", metric: "workouts", tier: 4, target: 100, name: "ach.workouts" },
+  { id: "w200", category: "consistency", metric: "workouts", tier: 5, target: 200, name: "ach.workouts" },
+  { id: "w365", category: "consistency", metric: "workouts", tier: 6, target: 365, name: "ach.workouts" },
+  { id: "s4", category: "consistency", metric: "streak", tier: 2, target: 4, name: "ach.s4" },
+  { id: "s8", category: "consistency", metric: "streak", tier: 3, target: 8, name: "ach.s8" },
+  { id: "s12", category: "consistency", metric: "streak", tier: 4, target: 12, name: "ach.s12" },
+  { id: "s26", category: "consistency", metric: "streak", tier: 5, target: 26, name: "ach.s26" },
+  { id: "s52", category: "consistency", metric: "streak", tier: 6, target: 52, name: "ach.s52" },
 
-  { id: "pr1", category: "records", metric: "prs", target: 1, name: "ach.pr1" },
-  { id: "pr10", category: "records", metric: "prs", target: 10, name: "ach.pr10" },
-  { id: "pr25", category: "records", metric: "prs", target: 25, name: "ach.pr25" },
-  { id: "lift60", category: "records", metric: "topSet", target: 60, name: "ach.lift" },
-  { id: "lift80", category: "records", metric: "topSet", target: 80, name: "ach.lift" },
-  { id: "lift100", category: "records", metric: "topSet", target: 100, name: "ach.lift" },
+  { id: "pr5", category: "records", metric: "prs", tier: 2, target: 5, name: "ach.prs" },
+  { id: "pr25", category: "records", metric: "prs", tier: 3, target: 25, name: "ach.prs" },
+  { id: "pr50", category: "records", metric: "prs", tier: 4, target: 50, name: "ach.prs" },
+  { id: "pr100", category: "records", metric: "prs", tier: 6, target: 100, name: "ach.prs" },
+  { id: "lift80", category: "records", metric: "topSet", tier: 2, target: 80, name: "ach.lift" },
+  { id: "lift100", category: "records", metric: "topSet", tier: 3, target: 100, name: "ach.lift" },
+  { id: "lift120", category: "records", metric: "topSet", tier: 4, target: 120, name: "ach.lift" },
+  { id: "lift140", category: "records", metric: "topSet", tier: 5, target: 140, name: "ach.lift" },
 
-  { id: "t10", category: "volume", metric: "tonnage", target: 10_000, name: "ach.tonnage" },
-  { id: "t50", category: "volume", metric: "tonnage", target: 50_000, name: "ach.tonnage" },
-  { id: "t100", category: "volume", metric: "tonnage", target: 100_000, name: "ach.tonnage" },
-  { id: "day5", category: "volume", metric: "dayVolume", target: 5_000, name: "ach.day" },
-  { id: "day10", category: "volume", metric: "dayVolume", target: 10_000, name: "ach.day" },
+  { id: "t100", category: "volume", metric: "tonnage", tier: 2, target: 100_000, name: "ach.tonnage" },
+  { id: "t250", category: "volume", metric: "tonnage", tier: 3, target: 250_000, name: "ach.tonnage" },
+  { id: "t500", category: "volume", metric: "tonnage", tier: 4, target: 500_000, name: "ach.tonnage" },
+  { id: "t1000", category: "volume", metric: "tonnage", tier: 6, target: 1_000_000, name: "ach.tonnage" },
+  { id: "day10", category: "volume", metric: "dayVolume", tier: 2, target: 10_000, name: "ach.day" },
+  { id: "day15", category: "volume", metric: "dayVolume", tier: 3, target: 15_000, name: "ach.day" },
+  { id: "day20", category: "volume", metric: "dayVolume", tier: 4, target: 20_000, name: "ach.day" },
 
-  { id: "ex10", category: "program", metric: "exercises", target: 10, name: "ach.ex10" },
-  { id: "ex25", category: "program", metric: "exercises", target: 25, name: "ach.ex25" },
-  { id: "ex50", category: "program", metric: "exercises", target: 50, name: "ach.ex50" },
-  { id: "groups4", category: "program", metric: "weekGroups", target: 4, name: "ach.groups4" },
-  { id: "groups6", category: "program", metric: "weekGroups", target: 6, name: "ach.groups6" },
-  { id: "weeks4", category: "program", metric: "programWeeks", target: 4, name: "ach.weeks4" },
-  { id: "programDone", category: "program", metric: "programsDone", target: 1, name: "ach.programDone" },
+  { id: "weeks4", category: "program", metric: "programWeeks", tier: 2, target: 4, name: "ach.weeks4" },
+  { id: "weeks12", category: "program", metric: "programWeeks", tier: 4, target: 12, name: "ach.weeks12" },
+  { id: "programDone", category: "program", metric: "programsDone", tier: 3, target: 1, name: "ach.programDone" },
+  { id: "programs3", category: "program", metric: "programsDone", tier: 5, target: 3, name: "ach.programs3" },
+  { id: "ex25", category: "program", metric: "exercises", tier: 2, target: 25, name: "ach.ex25" },
+  { id: "ex50", category: "program", metric: "exercises", tier: 3, target: 50, name: "ach.ex50" },
 ];
+
+/** A record has to beat your best by this much, kg… */
+const PR_MIN_GAIN = 2.5;
+/** …in an exercise done at least this many times before. */
+const PR_MIN_SESSIONS = 3;
+/** A week counts toward a streak once it holds this many workouts. */
+const STREAK_WEEK_WORKOUTS = 2;
 
 export const ACHIEVEMENT_HINT: Record<AchievementMetric, TranslationKey> = {
   workouts: "ach.hint.workouts",
@@ -81,7 +101,6 @@ export const ACHIEVEMENT_HINT: Record<AchievementMetric, TranslationKey> = {
   tonnage: "ach.hint.tonnage",
   dayVolume: "ach.hint.dayVolume",
   exercises: "ach.hint.exercises",
-  weekGroups: "ach.hint.weekGroups",
   programWeeks: "ach.hint.programWeeks",
   programsDone: "ach.hint.programsDone",
 };
@@ -102,9 +121,8 @@ type WorkoutFacts = {
   id: string;
   date: string;
   volume: number;
-  /** Heaviest set per exercise that day, kg. */
+  /** Heaviest set per exercise that day with 1–12 reps, kg (0 for bodyweight or timed work). */
   bestByExercise: Map<string, number>;
-  groups: Set<string>;
   dayId: string;
 };
 
@@ -138,7 +156,6 @@ export function replayAchievements(
       date: w.performed_at,
       volume: 0,
       bestByExercise: new Map<string, number>(),
-      groups: new Set<string>(),
       dayId: w.program_day_id,
     };
     facts.set(w.id, f);
@@ -150,13 +167,12 @@ export function replayAchievements(
     if (!f) continue;
     if (s.weight != null && s.reps != null) f.volume += s.weight * s.reps;
     const exId = s.program_exercise.exercise_id;
-    if (s.weight != null) {
+    // A weight moved zero times, or for twenty reps, is not a strength record.
+    if (s.weight != null && s.reps != null && s.reps >= 1 && s.reps <= 12) {
       f.bestByExercise.set(exId, Math.max(f.bestByExercise.get(exId) ?? 0, s.weight));
     } else if (!f.bestByExercise.has(exId)) {
       f.bestByExercise.set(exId, 0); // bodyweight or timed work still counts as trained
     }
-    const g = s.program_exercise.exercise?.muscle_group;
-    if (isMuscleGroup(g)) f.groups.add(g);
   }
 
   // Which program a day belongs to, and which week of it.
@@ -175,17 +191,17 @@ export function replayAchievements(
     tonnage: 0,
     dayVolume: 0,
     exercises: 0,
-    weekGroups: 0,
     programWeeks: 0,
     programsDone: 0,
   };
   const bestEver = new Map<string, number>();
-  const weekGroups = new Map<string, Set<string>>();
+  const sessionsOf = new Map<string, number>();
+  const workoutsInWeek = new Map<string, number>();
   const doneDays = new Map<string, Set<string>>();
   const countedWeeks = new Set<string>();
   const countedPrograms = new Set<string>();
   const unlocked = new Map<string, { at: string; by: string }>();
-  let lastWeek: string | null = null;
+  let lastStreakWeek: string | null = null;
   let streak = 0;
 
   for (const w of workouts) {
@@ -195,13 +211,16 @@ export function replayAchievements(
 
     counters.workouts += 1;
 
-    // Weeks in a row, as they happened.
+    // Weeks in a row, as they happened: a week joins the streak when it gets
+    // its second workout, and continues it only if the week before did too.
     const week = isoWeekKey(when);
-    if (week !== lastWeek) {
+    const inWeek = (workoutsInWeek.get(week) ?? 0) + 1;
+    workoutsInWeek.set(week, inWeek);
+    if (inWeek === STREAK_WEEK_WORKOUTS) {
       const previous = new Date(when);
       previous.setDate(previous.getDate() - 7);
-      streak = lastWeek != null && isoWeekKey(previous) === lastWeek ? streak + 1 : 1;
-      lastWeek = week;
+      streak = lastStreakWeek != null && isoWeekKey(previous) === lastStreakWeek ? streak + 1 : 1;
+      lastStreakWeek = week;
     }
     counters.streak = Math.max(counters.streak, streak);
 
@@ -210,17 +229,15 @@ export function replayAchievements(
 
     for (const [exId, best] of f.bestByExercise) {
       const previous = bestEver.get(exId);
-      // A first session is not a record; beating your own weight is.
-      if (previous != null && best > previous) counters.prs += 1;
+      const sessions = sessionsOf.get(exId) ?? 0;
+      // A record beats your own best by a real margin in a lift you know,
+      // not the second time you try something.
+      if (previous != null && sessions >= PR_MIN_SESSIONS && best >= previous + PR_MIN_GAIN) counters.prs += 1;
       if (previous == null || best > previous) bestEver.set(exId, best);
+      sessionsOf.set(exId, sessions + 1);
       counters.topSet = Math.max(counters.topSet, best);
     }
     counters.exercises = bestEver.size;
-
-    const inWeek = weekGroups.get(week) ?? new Set<string>();
-    for (const g of f.groups) inWeek.add(g);
-    weekGroups.set(week, inWeek);
-    counters.weekGroups = Math.max(counters.weekGroups, inWeek.size);
 
     // Program weeks and whole programs, counted the moment the last day lands.
     const info = dayInfo.get(f.dayId);
@@ -267,28 +284,32 @@ export function replayAchievements(
 }
 
 /** The same, for one client, read straight from the database. */
-export async function getAchievements(clientId: string): Promise<Achievement[]> {
-  const supabase = await createClient();
-  const [{ data: workouts }, { data: sets }, { data: programs }] = await Promise.all([
-    supabase
-      .from("workouts")
-      .select("id, performed_at, program_day_id")
-      .eq("client_id", clientId)
-      .eq("status", "done")
-      .order("performed_at"),
-    supabase
-      .from("set_logs")
-      .select(
-        "reps, weight, workout:workouts!inner(id, client_id, status), program_exercise:program_exercises!inner(exercise_id, exercise:exercises(muscle_group))",
-      )
-      .eq("workout.client_id", clientId)
-      .eq("workout.status", "done"),
-    supabase.from("programs").select("id, program_days(id, week_no)").eq("client_id", clientId),
-  ]);
+export function getAchievements(
+  clientId: string,
+  workouts: Workout[],
+  programs: Program[],
+  exercises: Map<string, Exercise>,
+): Achievement[] {
+  const done = workouts
+    .filter((w) => w.client_id === clientId && w.status === "done")
+    .sort((a, b) => a.performed_at.localeCompare(b.performed_at));
+  const sets: LoggedSet[] = done.flatMap((w) =>
+    w.sets.map((s) => ({
+      reps: s.reps,
+      weight: s.weight,
+      workout: { id: w.id },
+      program_exercise: {
+        exercise_id: s.exercise_id ?? s.program_exercise_id,
+        exercise: { muscle_group: (s.exercise_id && exercises.get(s.exercise_id)?.muscle_group) || null },
+      },
+    })),
+  );
   return replayAchievements(
-    workouts ?? [],
-    sets ?? [],
-    (programs ?? []).map((p) => ({ id: p.id, program_days: p.program_days ?? [] })),
+    done,
+    sets,
+    programs
+      .filter((p) => p.client_id === clientId)
+      .map((p) => ({ id: p.id, program_days: p.days.map((d) => ({ id: d.id, week_no: d.week_no })) })),
   );
 }
 

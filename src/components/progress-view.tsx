@@ -1,5 +1,3 @@
-"use client";
-
 import { useMemo, useState } from "react";
 import {
   Bar,
@@ -22,9 +20,9 @@ import { Input } from "@/components/ui/input";
 import { MuscleBadge } from "@/components/muscle-badges";
 
 // Series color validated with the dataviz palette checker (light surface).
-const SERIES = "#0d9488";
-const GRID = "#e5e5e5";
-const AXIS_TEXT = "#737373";
+const SERIES = "var(--chart-1)";
+const GRID = "var(--border)";
+const AXIS_TEXT = "var(--muted-foreground)";
 
 /** How many exercise cards to render before "Show more" — each one is a chart. */
 const PAGE = 6;
@@ -327,7 +325,7 @@ function ExerciseCard({
                 <CartesianGrid vertical={false} stroke={GRID} />
                 <XAxis dataKey="label" minTickGap={24} {...axis} />
                 <YAxis width={44} {...axis} />
-                <Tooltip content={<PointTooltip unit={unit} t={t} />} cursor={{ fill: "#f5f5f5" }} />
+                <Tooltip content={<PointTooltip unit={unit} t={t} />} cursor={{ fill: "var(--muted)" }} />
                 <Bar dataKey="value" fill={SERIES} radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false} />
               </BarChart>
             ) : (
@@ -342,7 +340,7 @@ function ExerciseCard({
                   stroke={SERIES}
                   strokeWidth={2}
                   dot={{ r: 4, fill: SERIES, strokeWidth: 0 }}
-                  activeDot={{ r: 6, stroke: "#ffffff", strokeWidth: 2 }}
+                  activeDot={{ r: 6, stroke: "var(--background)", strokeWidth: 2 }}
                   connectNulls
                   isAnimationActive={false}
                 />

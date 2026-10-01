@@ -1,7 +1,5 @@
-"use client";
-
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link } from "react-router";
+import { useLocation } from "react-router";
 import { CalendarDays, Dumbbell, History, Home, Settings, TrendingUp, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TabItem } from "@/components/tab-bar";
@@ -18,7 +16,7 @@ const ICONS = {
 
 /** Desktop navigation (md and up). Same items as the mobile tab bar. */
 export function SideNav({ items, userLabel }: { items: TabItem[]; userLabel: string }) {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-20 hidden w-56 flex-col border-r bg-card md:flex">
@@ -38,7 +36,7 @@ export function SideNav({ items, userLabel }: { items: TabItem[]; userLabel: str
             return (
               <li key={item.href}>
                 <Link
-                  href={item.href}
+                  to={item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     active ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-muted",

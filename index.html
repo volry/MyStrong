@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="uk" class="h-full antialiased">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#17191c" />
+    <meta name="description" content="Training programs and workout log" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="myStrong" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <title>myStrong</title>
+    <style>
+      html { background: #17191c; }
+      html[data-theme="light"] { background: #f3f4f5; }
+    </style>
+    <script>
+      // Apply the saved colour theme before the first paint (see src/lib/theme.ts).
+      try {
+        var pref = localStorage.getItem("mystrong:theme");
+        if (pref === "light" || (pref === "system" && matchMedia("(prefers-color-scheme: light)").matches)) {
+          document.documentElement.dataset.theme = "light";
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f3f4f5");
+          // Dark clock and battery over a light screen on iPhone.
+          document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').setAttribute("content", "default");
+        }
+      } catch (e) {}
+    </script>
+  </head>
+  <body class="min-h-full flex flex-col">
+    <div id="root" class="flex min-h-dvh flex-col"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

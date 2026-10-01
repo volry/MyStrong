@@ -29,14 +29,14 @@ export function muscleSummary(rows: { exercise: { muscle_group: string | null } 
  * are not a muscle group. Class strings are literal so Tailwind keeps them.
  */
 export const MUSCLE_BADGE: Record<MuscleGroup, string> = {
-  chest: "bg-rose-100 text-rose-800",
-  back: "bg-blue-100 text-blue-800",
-  shoulders: "bg-amber-100 text-amber-900",
-  arms: "bg-violet-100 text-violet-800",
-  legs: "bg-green-100 text-green-800",
-  glutes: "bg-fuchsia-100 text-fuchsia-800",
-  core: "bg-sky-100 text-sky-800",
-  cardio: "bg-orange-100 text-orange-800",
-  fullbody: "bg-stone-200 text-stone-700",
-  other: "bg-stone-200 text-stone-700",
+  chest: "bg-rose-400/15 text-rose-300 light:bg-rose-100 light:text-rose-700",
+  back: "bg-blue-400/15 text-blue-300 light:bg-blue-100 light:text-blue-700",
+  shoulders: "bg-amber-400/15 text-amber-200 light:bg-amber-100 light:text-amber-800",
+  arms: "bg-violet-400/15 text-violet-300 light:bg-violet-100 light:text-violet-700",
+  legs: "bg-green-400/15 text-green-300 light:bg-green-100 light:text-green-700",
+  glutes: "bg-fuchsia-400/15 text-fuchsia-300 light:bg-fuchsia-100 light:text-fuchsia-700",
+  core: "bg-sky-400/15 text-sky-300 light:bg-sky-100 light:text-sky-700",
+  cardio: "bg-orange-400/15 text-orange-300 light:bg-orange-100 light:text-orange-700",
+  fullbody: "bg-stone-300/10 text-stone-300 light:bg-stone-200 light:text-stone-700",
+  other: "bg-stone-300/10 text-stone-300 light:bg-stone-200 light:text-stone-700",
 };

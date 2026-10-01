@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Bar,
   BarChart,
@@ -14,9 +12,9 @@ import {
 import type { Locale } from "@/i18n/dictionaries";
 
 // Same validated series colour as the progress screen (dataviz palette, light surface).
-const SERIES = "#0d9488";
-const GRID = "#e5e5e5";
-const AXIS_TEXT = "#737373";
+const SERIES = "var(--chart-1)";
+const GRID = "var(--border)";
+const AXIS_TEXT = "var(--muted-foreground)";
 
 export type TrendPoint = { date: string; value: number };
 
@@ -64,7 +62,7 @@ export function TrendChart({
                 stroke={SERIES}
                 strokeWidth={2}
                 dot={{ r: 4, fill: SERIES, strokeWidth: 0 }}
-                activeDot={{ r: 6, stroke: "#ffffff", strokeWidth: 2 }}
+                activeDot={{ r: 6, stroke: "var(--background)", strokeWidth: 2 }}
                 isAnimationActive={false}
               />
             </LineChart>

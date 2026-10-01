@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { Play, Video } from "lucide-react";
 import { youtubeEmbedUrl, youtubeId, youtubeThumbUrl } from "@/lib/youtube";
@@ -55,7 +53,7 @@ export function YoutubeEmbed({
             className="absolute inset-0 flex items-center justify-center"
             aria-label={title ? `Play ${title}` : "Play video"}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            
             <img src={youtubeThumbUrl(id)} alt="" className="h-full w-full object-cover opacity-80" />
             <span className="absolute flex size-16 items-center justify-center rounded-full bg-white/90 text-black shadow-lg">
               <Play className="ml-1 size-7" fill="currentColor" />

@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
 import { Minus, Plus, X } from "lucide-react";
 import type { T } from "@/i18n/dictionaries";
@@ -119,17 +117,17 @@ export function RestTimer({
           screen that is already green. The text is dark in both states, so it stays
           readable as the fill drains away from under it.
         */}
-        <div className="relative h-11 flex-1 overflow-hidden rounded-lg bg-amber-100">
+        <div className="relative h-11 flex-1 overflow-hidden rounded-lg bg-plate-blue/20">
           <div
             className={cn(
               "absolute inset-y-0 left-0 transition-[width] duration-200",
-              over ? "bg-amber-200" : "bg-amber-400",
+              over ? "bg-plate-blue/40" : "bg-plate-blue",
             )}
             style={{ width: `${over ? 100 : percent}%` }}
           />
-          <div className="absolute inset-0 flex items-center justify-between px-3 text-amber-950">
+          <div className="absolute inset-0 flex items-center justify-between px-3 text-white">
             <span className="text-sm font-medium">{over ? t("rest.over") : t("rest.title")}</span>
-            <span className="text-base font-semibold tabular-nums">{formatClock(Math.max(0, left))}</span>
+            <span className="font-display text-xl font-bold tabular-nums">{formatClock(Math.max(0, left))}</span>
           </div>
         </div>
 

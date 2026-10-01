@@ -1,9 +1,6 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# myStrong — notes for coding agents
 
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
+- Stack: Vite + React 19 SPA with React Router, Firebase (Auth, Firestore with offline persistence, Cloud Functions, Hosting). No Next.js, no server components.
+- Screens read data only through `useData()` (`src/data/store.tsx`) and pure selectors in `src/lib/`; they write through `src/data/actions/*`, which do not await the server (offline-first).
+- Any change to what a role may read or write goes into `firestore.rules` together with a case in `scripts/firestore-rules.test.mjs` (`npm run test:rules`, needs JDK 21+).
+- Architecture, data model and deployment: `docs/firebase-migration.md`.
