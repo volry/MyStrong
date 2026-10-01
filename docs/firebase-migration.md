@@ -87,7 +87,9 @@ Moving the data:
 7. `npm run deploy` (hosting, rules) and `npm run deploy:functions`.
 8. Check on the iPhone: sign in, log a workout in airplane mode, close the app,
    reopen, reconnect; coach sees it and gets a push.
-9. Point `mystrong.vercel.app` at the new address (a redirect), tell everyone to
+9. Point `mystrong.vercel.app` at the new address: `vercel.json` makes the old
+   Vercel project build nothing and answer every path with a permanent
+   redirect to the same path (query string kept) on the Firebase site, tell everyone to
    add the new address to the Home Screen and turn notifications on again (Web
    Push subscriptions belong to the old origin). Existing Google Sheets links
    keep working once `/api/export/*` on Vercel redirects too; export tokens were

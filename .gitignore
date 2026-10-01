@@ -51,3 +51,6 @@ ui-debug.log*
 /.next/
 # Cloud Functions dependencies
 /functions/node_modules/
+
+# output of the redirect-only Vercel deployment (vercel.json)
+/.vercel-redirect/

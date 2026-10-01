@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "echo 'nothing to install: this deployment only redirects'",
+  "buildCommand": "mkdir -p .vercel-redirect && echo 'myStrong moved to https://mystrong-vvr-2026.web.app' > .vercel-redirect/index.html",
+  "outputDirectory": ".vercel-redirect",
+  "redirects": [
+    { "source": "/(.*)", "destination": "https://mystrong-vvr-2026.web.app/$1", "permanent": true }
+  ]
+}
