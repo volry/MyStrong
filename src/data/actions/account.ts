@@ -10,6 +10,7 @@ import { rememberLocale } from "@/i18n/client";
 import type { Profile } from "@/lib/profile";
 import type { Exercise, ExerciseDoc, InviteDoc, Program } from "../types";
 import { fire, newId, now } from "../write";
+import { track } from "@/lib/analytics";
 
 // ---------- settings ----------
 
@@ -48,6 +49,7 @@ export function inviteClient(profile: Profile, formData: FormData) {
     accepted_at: null,
   };
   fire(setDoc(doc(db, "invites", email), invite));
+  track("invite_send", { role: invite.role });
   go("/?invited=1", { replace: true });
 }
 

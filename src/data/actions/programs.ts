@@ -5,6 +5,7 @@ import { int, num, nullable, str } from "@/lib/form";
 import type { Profile } from "@/lib/profile";
 import type { Program, ProgramDayDoc, ProgramDoc, ProgramItem } from "../types";
 import { fire, newId, now, read } from "../write";
+import { track } from "@/lib/analytics";
 
 /**
  * Program builder actions. A program is one document with its days and their
@@ -85,6 +86,7 @@ export function createProgram(profile: Profile, formData: FormData) {
       }),
     ),
   );
+  track("program_create", { by: "coach" });
   go(`/programs/${id}`);
 }
 
@@ -106,6 +108,7 @@ export function createMyProgram(profile: Profile, formData: FormData) {
       }),
     ),
   );
+  track("program_create", { by: "client" });
   go(`/my-programs/${id}`);
 }
 
@@ -181,7 +184,10 @@ export function reviewProgram(profile: Profile, program: Program, formData: Form
 /** Client: send the program to the coaches and wait for their answer. */
 export async function submitMyProgram(profile: Profile, id: string) {
   const done = await edit(profile, id, () => ({ review_status: "pending", submitted_at: now() }));
-  if (done) go(`/my-programs/${id}?submitted=1`, { replace: true });
+  if (done) {
+    track("program_submit");
+    go(`/my-programs/${id}?submitted=1`, { replace: true });
+  }
 }
 
 /** Client: take the program back off the coach's desk so it can be edited again. */

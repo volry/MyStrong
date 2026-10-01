@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
 import { setNavigate } from "@/lib/nav";
+import { trackPages } from "@/lib/analytics";
 import { AppLayout } from "@/components/app-layout";
 import { RouteError } from "@/components/route-error";
 import LoginPage from "@/pages/login";
@@ -43,3 +44,4 @@ export const router = createBrowserRouter([
 ]);
 
 setNavigate((to, opts) => void router.navigate(to, opts));
+trackPages(router);

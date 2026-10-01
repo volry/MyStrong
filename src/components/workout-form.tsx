@@ -20,6 +20,7 @@ import { YoutubeEmbed } from "@/components/youtube-embed";
 import { useData } from "@/data/store";
 import { finishWorkout, setFocusMetric, skipDay, updateWorkout, type NoteInput, type SetInput } from "@/data/actions/workouts";
 import { getAchievements } from "@/lib/achievements";
+import { track } from "@/lib/analytics";
 import { go } from "@/lib/nav";
 
 import type { PrevSet, Row, WorkoutItem } from "@/lib/workout-rows";
@@ -307,12 +308,14 @@ export function WorkoutForm(props: Props) {
       }
       // A finished workout can cross a milestone. When it does, say so instead of
       // dropping the person back on Today as if nothing happened.
-      const unlocked = getAchievements(
+      const unlockedNow = getAchievements(
         data.me.id,
         [workout, ...data.workouts.filter((w) => w.id !== workout.id)],
         data.programs,
         data.exercises,
-      ).some((a) => a.unlockedBy === workout.id);
+      ).filter((a) => a.unlockedBy === workout.id);
+      for (const a of unlockedNow) track("achievement_unlock", { achievement_id: a.id, tier: a.tier });
+      const unlocked = unlockedNow.length > 0;
       if (unlocked) go(`/achievements?new=${workout.id}`, { replace: true });
       else go(data.me.role === "coach" ? "/me?done=1" : "/?done=1", { replace: true });
     } catch {

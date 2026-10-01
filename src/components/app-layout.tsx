@@ -5,6 +5,7 @@ import { useSession } from "@/data/store";
 import { onWriteError } from "@/data/write";
 import { makeT, isLocale } from "@/i18n/dictionaries";
 import { rememberLocale } from "@/i18n/client";
+import { setRole } from "@/lib/analytics";
 import { TabBar, type TabItem } from "@/components/tab-bar";
 import { SideNav } from "@/components/side-nav";
 import { FinishSignUp } from "@/components/finish-sign-up";
@@ -49,6 +50,10 @@ export function AppLayout() {
   }, [pathname]);
 
   const locale = session.status === "ready" && isLocale(session.data.me.locale) ? session.data.me.locale : null;
+  const role = session.status === "ready" ? session.data.me.role : null;
+  useEffect(() => {
+    if (role) setRole(role);
+  }, [role]);
   useEffect(() => {
     if (locale) rememberLocale(locale);
   }, [locale]);

@@ -7,6 +7,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import type { Profile } from "@/lib/profile";
 import type { LoggedSetDoc, Program, Workout, WorkoutDoc } from "../types";
 import { fire, newId, now } from "../write";
+import { track } from "@/lib/analytics";
 
 export type SetInput = {
   program_exercise_id: string;
@@ -110,6 +111,7 @@ export function finishWorkout(
     created_at: stamp,
   };
   fire(setDoc(doc(db, "workouts", id), workout));
+  track("workout_finish", { sets: sets.length, for_client: ownerId !== profile.id ? 1 : 0 });
   return { workout: { ...workout, id } };
 }
 
@@ -169,6 +171,7 @@ export function skipDay(profile: Profile, programs: Program[], dayId: string, cl
     created_at: stamp,
   };
   fire(setDoc(doc(db, "workouts", newId("workouts")), workout));
+  track("workout_skip");
   go(forClient ? `/clients/${ownerId}?skipped=1` : profile.role === "coach" ? "/me?skipped=1" : "/?skipped=1");
 }
 

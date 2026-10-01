@@ -13,6 +13,7 @@ const config = {
   authDomain: "mystrong-vvr-2026.firebaseapp.com",
   projectId: "mystrong-vvr-2026",
   appId: "1:1087417621958:web:b31cff672f2173f006a6c7",
+  measurementId: "G-K2VYE4M8XB",
 };
 
 const emulators = import.meta.env.VITE_FIREBASE_EMULATORS === "true";
