@@ -71,7 +71,12 @@ export function mayEditExercise(profile: Profile, exercise: Pick<Exercise, "crea
   return profile.role === "coach" || exercise.created_by === profile.id;
 }
 
-export function saveExercise(profile: Profile, existing: Exercise | null, formData: FormData): ExerciseFormState {
+export function saveExercise(
+  profile: Profile,
+  existing: Exercise | null,
+  formData: FormData,
+  library: Iterable<Exercise> = [],
+): ExerciseFormState {
   if (existing && !mayEditExercise(profile, existing)) return { error: "ex.notYours" };
   const name = str(formData, "name");
   if (!name) return { error: "common.error" };
@@ -88,6 +93,10 @@ export function saveExercise(profile: Profile, existing: Exercise | null, formDa
     muscle_group,
     description: nullable(str(formData, "description").slice(0, 4000)),
   };
+  const same = [...library].find(
+    (e) => e.id !== existing?.id && e.name.trim().toLowerCase() === payload.name.toLowerCase(),
+  );
+  if (same) return { error: "ex.duplicate" };
   if (existing) {
     fire(updateDoc(doc(db, "exercises", existing.id), payload));
   } else {

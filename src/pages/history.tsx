@@ -3,7 +3,7 @@ import { ChevronRight, MessageSquare } from "lucide-react";
 import { useData } from "@/data/store";
 import { useLocale } from "@/i18n/client";
 import { makeT } from "@/i18n/dictionaries";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 
 export default function HistoryPage() {
@@ -35,6 +35,7 @@ export default function HistoryPage() {
                       ? `${t("prog.week", { n: w.day.week_no })} · ${t("prog.day", { n: w.day.day_no })}${w.day.title ? ` · ${w.day.title}` : ""}`
                       : ""}
                     {w.status === "done" && ` · ${t("history.sets", { n: w.sets.length })}`}
+                    {w.status === "done" && formatDuration(w.duration_sec, t) && ` · ${formatDuration(w.duration_sec, t)}`}
                   </div>
                   {w.client_comment && (
                     <div className="mt-1 flex items-start gap-1 text-sm">

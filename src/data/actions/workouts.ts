@@ -26,7 +26,27 @@ export type FinishInput = {
   notes?: NoteInput[];
   /** Coach logging on behalf of a client. */
   clientId?: string;
+  /** When "Start the workout" was tapped, ISO. */
+  startedAt?: string;
 };
+
+/**
+ * A workout belongs to the moment it started, not the moment it was saved — but
+ * only when that moment is believable. A session left open overnight, or a clock
+ * ahead of the phone's, falls back to now.
+ */
+function sessionFrom(startedAt: string | undefined): { performed_at?: string; duration_sec: number | null } {
+  if (!startedAt) return { duration_sec: null };
+  const started = new Date(startedAt).getTime();
+  if (!Number.isFinite(started)) return { duration_sec: null };
+  const ago = Date.now() - started;
+  if (ago < 0 || ago > 12 * 60 * 60 * 1000) return { duration_sec: null };
+  return {
+    performed_at: new Date(started).toISOString(),
+    // A session shorter than a minute is a mis-tap, not a workout worth timing.
+    duration_sec: ago >= 60_000 ? Math.round(ago / 1000) : null,
+  };
+}
 
 function cleanInt(v: unknown, max: number): number | null {
   if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return null;
@@ -95,6 +115,7 @@ export function finishWorkout(
 
   const id = newId("workouts");
   const stamp = now();
+  const session = sessionFrom(input.startedAt);
   const workout: WorkoutDoc = {
     client_id: ownerId,
     coach_id: coachIdFor(profile),
@@ -102,7 +123,8 @@ export function finishWorkout(
     program_id: found?.program.id ?? null,
     program_day_id: input.dayId,
     day: found ? { week_no: found.day.week_no, day_no: found.day.day_no, title: found.day.title } : null,
-    performed_at: stamp,
+    performed_at: session.performed_at ?? stamp,
+    duration_sec: session.duration_sec,
     status: "done",
     client_comment: cleanComment(input.comment),
     sets,
@@ -163,6 +185,7 @@ export function skipDay(profile: Profile, programs: Program[], dayId: string, cl
     program_day_id: dayId,
     day: found ? { week_no: found.day.week_no, day_no: found.day.day_no, title: found.day.title } : null,
     performed_at: stamp,
+    duration_sec: null,
     status: "skipped",
     client_comment: null,
     sets: [],
@@ -197,4 +220,43 @@ export function setFocusMetric(profile: Profile, exerciseId: string, metric: str
   if (!isFocusMetric(metric)) return;
   const ownerId = resolveOwner(profile, clientId);
   fire(updateDoc(doc(db, "users", ownerId), { [`focus.${exerciseId}`]: metric }));
+}
+
+/**
+ * Add an exercise to the day being trained, from the workout screen. It lands in
+ * the program day itself, not just in today's session, so it is there next time
+ * too. A client may change only a program they wrote, and not while it is with
+ * the coach for review; a coach may add to any program of theirs.
+ */
+export function addExerciseToDay(
+  profile: Profile,
+  programs: Program[],
+  input: { dayId: string; exerciseId: string },
+): { error: TranslationKey } | void {
+  const found = findDay(programs, input.dayId);
+  if (!found || !input.exerciseId) return { error: "common.error" };
+  const { program, day } = found;
+  const mine = program.client_id === profile.id && program.created_by === profile.id;
+  if (!mine && profile.role !== "coach") return { error: "workout.addNotYours" };
+  if (program.review_status === "pending") return { error: "workout.addWhilePending" };
+  if (day.items.some((i) => i.exercise_id === input.exerciseId)) return { error: "workout.alreadyInDay" };
+
+  const item = {
+    id: crypto.randomUUID(),
+    exercise_id: input.exerciseId,
+    target_sets: null,
+    target_reps: null,
+    target_weight: null,
+    target_time_sec: null,
+    target_rpe: null,
+    coach_notes: null,
+  };
+  const days = program.days.map((d) => (d.id === day.id ? { ...d, items: [...d.items, item] } : d));
+  fire(
+    updateDoc(doc(db, "programs", program.id), {
+      days,
+      // An approved program that changes is no longer what the coach approved.
+      ...(mine && program.review_status === "approved" ? { review_status: "self" } : {}),
+    }),
+  );
 }

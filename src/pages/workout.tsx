@@ -44,8 +44,26 @@ export default function WorkoutPage() {
     [owner.id, workouts, items],
   );
 
+  // Adding an exercise mid-workout: the person who wrote the program, or a coach.
+  const ownProgram = Boolean(found && found.program.client_id === profile.id && found.program.created_by === profile.id);
+  const canAdd = Boolean(found && found.program.review_status !== "pending" && (ownProgram || profile.role === "coach"));
+  const library = useMemo(
+    () =>
+      canAdd
+        ? [...exercises.values()]
+            .map((e) => ({ id: e.id, name: e.name, muscle_group: e.muscle_group }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        : undefined,
+    [canAdd, exercises],
+  );
+
   if (!found || (forClient && !client)) return <Navigate to="/" replace />;
   const { program, day } = found;
+  const editDayHref = ownProgram
+    ? `/my-programs/${program.id}/days/${day.id}`
+    : profile.role === "coach"
+      ? `/programs/${program.id}/days/${day.id}`
+      : undefined;
 
   // Newest first.
   const lastDone = workouts.find(
@@ -92,6 +110,10 @@ export default function WorkoutPage() {
         restTimerSec={profile.rest_timer_sec}
         stats={stats}
         focus={owner.focus}
+        warmup={day.warmup}
+        cooldown={day.cooldown}
+        library={library}
+        editDayHref={editDayHref}
       />
     </div>
   );

@@ -19,6 +19,13 @@ export function num(fd: FormData, key: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Free-text block (warm-up, cool-down): trimmed, capped to what the field allows. */
+export function text(fd: FormData, key: string, max = 2000): string | null {
+  const v = fd.get(key);
+  const s = typeof v === "string" ? v.trim().slice(0, max) : "";
+  return s === "" ? null : s;
+}
+
 export function nullable(s: string): string | null {
   return s === "" ? null : s;
 }

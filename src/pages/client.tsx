@@ -8,7 +8,7 @@ import { markWorkoutsSeen } from "@/data/actions/workouts";
 import { getActiveProgram } from "@/lib/client-data";
 import { useLocale } from "@/i18n/client";
 import { makeT } from "@/i18n/dictionaries";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -199,6 +199,7 @@ export default function ClientPage() {
                         ? `${t("prog.week", { n: w.day.week_no })} · ${t("prog.day", { n: w.day.day_no })}${w.day.title ? ` · ${w.day.title}` : ""}`
                         : ""}
                       {w.status === "done" && ` · ${t("history.sets", { n: w.sets.length })}`}
+                      {w.status === "done" && formatDuration(w.duration_sec, t) && ` · ${formatDuration(w.duration_sec, t)}`}
                     </div>
                     {w.client_comment && (
                       <div className="mt-1 flex items-start gap-1 text-sm">

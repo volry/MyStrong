@@ -18,6 +18,20 @@
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-display);
+  /* One step up from Tailwind's defaults: this is read at arm's length, in a gym,
+     often mid-set. Spacing is untouched, so only the type grows. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: calc(1.125 / 0.8125);
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: calc(1.375 / 0.9375);
+  --text-base: 1.0625rem;
+  --text-base--line-height: calc(1.5 / 1.0625);
+  --text-lg: 1.1875rem;
+  --text-lg--line-height: calc(1.75 / 1.1875);
+  --text-xl: 1.3125rem;
+  --text-xl--line-height: calc(1.875 / 1.3125);
+  --text-2xl: 1.625rem;
+  --text-2xl--line-height: calc(2 / 1.625);
   --font-display: "Fira Sans Extra Condensed", "Arial Narrow", ui-sans-serif, sans-serif;
   --color-plate-red: var(--plate-red);
   --color-plate-blue: var(--plate-blue);

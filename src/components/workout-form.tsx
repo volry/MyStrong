@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type FocusEvent } from "react";
-import { BarChart3, Check, MessageSquare, Plus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type FocusEvent } from "react";
+import { Link } from "react-router";
+import { BarChart3, Check, MessageSquare, Play, Plus } from "lucide-react";
 import { makeT, type Locale, type TranslationKey } from "@/i18n/dictionaries";
 
-import { formatTarget } from "@/lib/format";
+import { formatElapsed, formatTarget } from "@/lib/format";
 import { formatWeight, kgToUnit, unitToKg, type Unit } from "@/lib/units";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,8 +18,18 @@ import { DEFAULT_FOCUS, FOCUS_LABEL, focusTotals, type FocusMetric } from "@/lib
 import { FocusMetricPicker, formatFocus } from "@/components/focus-metric-picker";
 import { ConfirmButton } from "@/components/confirm-button";
 import { YoutubeEmbed } from "@/components/youtube-embed";
+import { TextBlock } from "@/components/day-blocks";
+import { ExercisePicker, type PickerExercise } from "@/components/exercise-picker";
 import { useData } from "@/data/store";
-import { finishWorkout, setFocusMetric, skipDay, updateWorkout, type NoteInput, type SetInput } from "@/data/actions/workouts";
+import {
+  addExerciseToDay,
+  finishWorkout,
+  setFocusMetric,
+  skipDay,
+  updateWorkout,
+  type NoteInput,
+  type SetInput,
+} from "@/data/actions/workouts";
 import { getAchievements } from "@/lib/achievements";
 import { track } from "@/lib/analytics";
 import { go } from "@/lib/nav";
@@ -26,7 +37,13 @@ import { go } from "@/lib/nav";
 import type { PrevSet, Row, WorkoutItem } from "@/lib/workout-rows";
 export type { PrevSet, Row, WorkoutItem };
 
-type Draft = { rows: Record<string, Row[]>; comment: string; notes?: Record<string, string> };
+type Draft = {
+  rows: Record<string, Row[]>;
+  comment: string;
+  notes?: Record<string, string>;
+  /** When "Start the workout" was tapped, ISO. */
+  startedAt?: string;
+};
 
 function usesTime(item: WorkoutItem) {
   return item.target_time_sec != null && item.target_reps == null;
@@ -114,6 +131,13 @@ type Props = {
   focus?: Record<string, FocusMetric>;
   /** Coach logging for a client: the workout is saved under this client. */
   clientId?: string;
+  /** Free text to read before and after the session; nothing is logged for it. */
+  warmup?: string | null;
+  cooldown?: string | null;
+  /** The exercise library, when this person may add one to the day. */
+  library?: PickerExercise[];
+  /** Day editor for this day, when this person may edit it. */
+  editDayHref?: string;
 } & (
   | { mode?: "log" }
   | {
@@ -138,6 +162,10 @@ export function WorkoutForm(props: Props) {
     restTimerSec = 0,
     stats,
     focus: savedFocus,
+    warmup,
+    cooldown,
+    library,
+    editDayHref,
   } = props;
   const isEdit = props.mode === "edit";
   const t = makeT(locale);
@@ -164,6 +192,28 @@ export function WorkoutForm(props: Props) {
   const [sheet, setSheet] = useState<{ itemId: string; tab: SheetTab } | null>(null);
   const [focusPicker, setFocusPicker] = useState<string | null>(null);
   const [focus, setFocus] = useState<Record<string, FocusMetric>>(savedFocus ?? {});
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [adding, setAdding] = useState("");
+
+  /**
+   * Rows for every exercise in the day as it stands now. `rows` is state seeded
+   * once, so an exercise added mid-session (the day's items grow) has no entry
+   * there yet — every read falls back to these.
+   */
+  const blankRows = useMemo(() => buildRows(items, previous, unit), [items, previous, unit]);
+  const rowsOf = (itemId: string): Row[] => rows[itemId] ?? blankRows[itemId] ?? [];
+
+  /** Put an exercise into the day; it shows up with fresh rows as the program updates. */
+  function addExercise() {
+    if (!adding) return;
+    const result = addExerciseToDay(data.me, data.programs, { dayId, exerciseId: adding });
+    if (result?.error) {
+      setError(result.error);
+      return;
+    }
+    setError(null);
+    setAdding("");
+  }
 
   // After mount: restore an unfinished draft (log mode) or compute the local date (edit mode).
   // localStorage and the local timezone are only available in the browser, hence an effect.
@@ -188,6 +238,7 @@ export function WorkoutForm(props: Props) {
               setNotes(draft.notes);
               setNoteOpen(Object.fromEntries(Object.keys(draft.notes).map((id) => [id, true])));
             }
+            if (draft.startedAt) setStartedAt(draft.startedAt);
           }
         } catch {
           // ignore corrupt drafts
@@ -202,16 +253,19 @@ export function WorkoutForm(props: Props) {
   useEffect(() => {
     if (!hydrated || isEdit) return;
     try {
-      localStorage.setItem(draftKey, JSON.stringify({ rows, comment, notes } satisfies Draft));
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({ rows, comment, notes, startedAt: startedAt ?? undefined } satisfies Draft),
+      );
     } catch {
       // storage unavailable
     }
-  }, [rows, comment, notes, hydrated, isEdit, draftKey]);
+  }, [rows, comment, notes, startedAt, hydrated, isEdit, draftKey]);
 
   function updateRow(itemId: string, index: number, patch: Partial<Row>) {
     setRows((r) => ({
       ...r,
-      [itemId]: r[itemId].map((row, i) => (i === index ? { ...row, ...patch } : row)),
+      [itemId]: (r[itemId] ?? blankRows[itemId] ?? []).map((row, i) => (i === index ? { ...row, ...patch } : row)),
     }));
   }
 
@@ -223,20 +277,23 @@ export function WorkoutForm(props: Props) {
 
   function addRow(itemId: string) {
     setRows((r) => {
-      const list = r[itemId];
-      const last = list[list.length - 1];
+      const list = r[itemId] ?? blankRows[itemId] ?? [];
+      const last = list[list.length - 1] ?? { weight: "", reps: "", time: "", done: false };
       return { ...r, [itemId]: [...list, { ...last, done: false }] };
     });
   }
 
   function markAll(itemId: string) {
-    setRows((r) => ({ ...r, [itemId]: r[itemId].map((row) => ({ ...row, done: true })) }));
+    setRows((r) => ({
+      ...r,
+      [itemId]: (r[itemId] ?? blankRows[itemId] ?? []).map((row) => ({ ...row, done: true })),
+    }));
   }
 
   function collectSets(): SetInput[] {
     const sets: SetInput[] = [];
     for (const item of items) {
-      const done = rows[item.id].filter((row) => row.done);
+      const done = rowsOf(item.id).filter((row) => row.done);
       done.forEach((row, i) => {
         const w = parseNum(row.weight);
         sets.push({
@@ -295,7 +352,14 @@ export function WorkoutForm(props: Props) {
         if (result?.error) setError(result.error);
         return;
       }
-      const result = finishWorkout(data.me, data.programs, { dayId, comment, sets, notes: noteList, clientId });
+      const result = finishWorkout(data.me, data.programs, {
+        dayId,
+        comment,
+        sets,
+        notes: noteList,
+        clientId,
+        startedAt: startedAt ?? undefined,
+      });
       if ("error" in result) {
         setError(result.error);
         return;
@@ -342,7 +406,7 @@ export function WorkoutForm(props: Props) {
 
   /** Today's numbers for an exercise, from the sets ticked so far. */
   function totalsOf(item: WorkoutItem) {
-    const ticked = (rows[item.id] ?? [])
+    const ticked = rowsOf(item.id)
       .filter((row) => row.done)
       .map((row) => ({ weight: parseNum(row.weight), reps: parseNum(row.reps) }));
     // Last session's volume, converted into the unit the inputs use.
@@ -355,7 +419,7 @@ export function WorkoutForm(props: Props) {
     "h-12 w-full rounded-lg border border-input bg-background px-1 text-center text-xl tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   const gridCols = isEdit
     ? "grid-cols-[2rem_1fr_1fr_2.75rem]"
-    : "grid-cols-[2rem_3.75rem_1fr_1fr_2.75rem]";
+    : "grid-cols-[2rem_5rem_1fr_1fr_3rem]";
 
   return (
     <div className="space-y-4">
@@ -377,6 +441,23 @@ export function WorkoutForm(props: Props) {
       ) : (
         <p className="text-xs text-muted-foreground">{t("workout.tickHint")}</p>
       )}
+
+      {canLog &&
+        !isEdit &&
+        hydrated &&
+        (startedAt ? (
+          <ElapsedBar startedAt={startedAt} label={t("workout.inProgress")} />
+        ) : (
+          <div className="space-y-1">
+            <Button type="button" onClick={() => setStartedAt(new Date().toISOString())} className="h-14 w-full text-lg">
+              <Play className="size-5" fill="currentColor" />
+              {t("workout.start")}
+            </Button>
+            <p className="text-xs text-muted-foreground">{t("workout.startHint")}</p>
+          </div>
+        ))}
+
+      <TextBlock title={t("day.warmup")} text={warmup} />
 
       {items.map((item, idx) => {
         const timeMode = usesTime(item);
@@ -442,7 +523,7 @@ export function WorkoutForm(props: Props) {
                 <span className="text-center">{timeMode ? t("workout.time") : t("workout.reps")}</span>
                 <span />
               </div>
-              {rows[item.id].map((row, i) => (
+              {rowsOf(item.id).map((row, i) => (
                 <div key={i} className={cn("grid items-center gap-2", gridCols)}>
                   <div className="text-center font-medium">{i + 1}</div>
                   {!isEdit && (
@@ -535,6 +616,25 @@ export function WorkoutForm(props: Props) {
         );
       })}
 
+      {!isEdit && library && library.length > 0 && (
+        <div className="space-y-2 rounded-xl border border-dashed p-3">
+          <div className="font-display text-lg font-bold">{t("workout.addExercise")}</div>
+          <ExercisePicker exercises={library} locale={locale} value={adding} onChange={setAdding} />
+          <Button type="button" onClick={addExercise} disabled={!adding} className="h-11 w-full">
+            <Plus className="size-4" />
+            {t("common.add")}
+          </Button>
+          <p className="text-xs text-muted-foreground">{t("workout.addExerciseHint")}</p>
+          {editDayHref && (
+            <Link to={editDayHref} className="inline-block text-sm text-primary underline-offset-4 hover:underline">
+              {t("workout.editDay")}
+            </Link>
+          )}
+        </div>
+      )}
+
+      <TextBlock title={t("day.cooldown")} text={cooldown} />
+
       {canLog && (
         <>
           <div className="space-y-2">
@@ -607,6 +707,29 @@ export function WorkoutForm(props: Props) {
           onOpenChange={(open) => !open && setSheet(null)}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * How long the session has been running, pinned to the top of the screen while
+ * you scroll through the exercises. Recomputed from the start time on every
+ * tick, so a phone that slept shows the right number when it wakes.
+ */
+function ElapsedBar({ startedAt, label }: { startedAt: string; label: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const seconds = (now - new Date(startedAt).getTime()) / 1000;
+  return (
+    <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between gap-2 border-b bg-background/95 px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur">
+      <span className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span className="size-2 animate-pulse rounded-full bg-primary motion-reduce:animate-none" />
+        {label}
+      </span>
+      <span className="font-display text-2xl font-bold tabular-nums">{formatElapsed(seconds)}</span>
     </div>
   );
 }

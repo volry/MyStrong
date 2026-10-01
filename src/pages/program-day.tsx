@@ -24,16 +24,19 @@ import { YoutubeEmbed } from "@/components/youtube-embed";
 import { TargetFields } from "@/components/target-fields";
 import { MuscleBadge } from "@/components/muscle-badges";
 import { LibraryPicker } from "@/components/library-picker";
+import { DayBlocks } from "@/components/day-blocks";
+import { ExercisePicker } from "@/components/exercise-picker";
 
 const BASE = "/programs";
 
 export default function DayPage() {
-  const { me: coach, programs, exercises } = useData();
+  const { me: coach, programs, exercises, workouts } = useData();
   const locale = useLocale();
   const t = makeT(locale);
   const { id: programId = "", dayId = "" } = useParams();
   const [search] = useSearchParams();
   const saved = search.get("saved");
+  const error = search.get("error");
 
   const library = useMemo(
     () => [...exercises.values()].sort((a, b) => a.name.localeCompare(b.name)),
@@ -50,7 +53,7 @@ export default function DayPage() {
   const list = dayItems(found, exercises);
   const move = (id: string, direction: "up" | "down") =>
     void moveProgramExercise(coach, BASE, programId, day.id, id, direction);
-  const remove = (id: string) => void removeProgramExercise(coach, BASE, programId, day.id, id);
+  const remove = (id: string) => void removeProgramExercise(coach, BASE, programId, day.id, id, workouts);
   const save = (fd: FormData) => updateProgramExercise(coach, BASE, programId, day.id, fd);
   const add = (fd: FormData) => addProgramExercise(coach, BASE, programId, day.id, fd);
 
@@ -69,16 +72,28 @@ export default function DayPage() {
         </h1>
       </div>
 
-      <form action={(fd) => updateDay(coach, BASE, programId, day.id, fd)} className="flex max-w-xl gap-2">
-        <Input
-          name="title"
-          defaultValue={day.title ?? ""}
-          placeholder={t("prog.dayTitle")}
-          className="h-12 flex-1 text-base"
-        />
-        <Button type="submit" variant="secondary" className="h-12">
-          {t("common.save")}
-        </Button>
+      {error === "logged" && (
+        <p className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{t("day.hasLogs")}</p>
+      )}
+
+      {/* Keyed on the saved values so the fields show them after a save. */}
+      <form
+        key={`${day.title}|${day.warmup}|${day.cooldown}`}
+        action={(fd) => updateDay(coach, BASE, programId, day.id, fd)}
+        className="max-w-xl space-y-3"
+      >
+        <div className="flex gap-2">
+          <Input
+            name="title"
+            defaultValue={day.title ?? ""}
+            placeholder={t("prog.dayTitle")}
+            className="h-12 flex-1 text-base"
+          />
+          <Button type="submit" variant="secondary" className="h-12">
+            {t("common.save")}
+          </Button>
+        </div>
+        <DayBlocks t={t} warmup={day.warmup} cooldown={day.cooldown} />
       </form>
       {saved === "1" && <p className="-mt-4 text-sm text-primary">{t("common.saved")}</p>}
 
@@ -282,23 +297,8 @@ export default function DayPage() {
               ) : (
                 <form action={add} className="space-y-3">
                   <div className="space-y-2">
-                    <Label htmlFor="exercise_id">{t("day.pick")}</Label>
-                    <select
-                      id="exercise_id"
-                      name="exercise_id"
-                      required
-                      defaultValue=""
-                      className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base"
-                    >
-                      <option value="" disabled>
-                        —
-                      </option>
-                      {library.map((e) => (
-                        <option key={e.id} value={e.id}>
-                          {e.name}
-                        </option>
-                      ))}
-                    </select>
+                    <Label>{t("day.pick")}</Label>
+                    <ExercisePicker exercises={library} locale={locale} />
                   </div>
                   <TargetFields t={t} idPrefix="new" />
                   <Button type="submit" className="h-12 w-full text-base">

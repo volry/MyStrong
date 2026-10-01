@@ -213,12 +213,14 @@ service cloud.firestore {
     function validWorkout(d) {
       return d.keys().hasOnly([
           'client_id', 'coach_id', 'created_by', 'program_id', 'program_day_id', 'day', 'performed_at',
-          'status', 'client_comment', 'sets', 'notes', 'coach_seen_at', 'created_at'
+          'duration_sec', 'status', 'client_comment', 'sets', 'notes', 'coach_seen_at', 'created_at'
         ])
         && str(d.client_id, 128)
         && str(d.coach_id, 128)
         && str(d.program_day_id, 128)
         && str(d.performed_at, 40)
+        && (!('duration_sec' in d) || d.duration_sec == null
+          || (d.duration_sec is int && d.duration_sec > 0 && d.duration_sec <= 43200))
         && (d.status == 'done' || d.status == 'skipped')
         && optStr(d.client_comment, 2000)
         && d.sets is list && d.sets.size() <= 500

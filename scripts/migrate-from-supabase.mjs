@@ -102,6 +102,8 @@ export function transform(dump, coachEmail) {
         week_no: d.week_no,
         day_no: d.day_no,
         title: d.title,
+        warmup: d.warmup ?? null,
+        cooldown: d.cooldown ?? null,
         items: (itemsByDay.get(d.id) ?? [])
           .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
           .map((x) => ({
@@ -148,6 +150,7 @@ export function transform(dump, coachEmail) {
       program_day_id: w.program_day_id,
       day: day ? { week_no: day.week_no, day_no: day.day_no, title: day.title } : null,
       performed_at: iso(w.performed_at),
+      duration_sec: w.duration_sec ?? null,
       status: w.status,
       client_comment: w.client_comment,
       sets: (setsByWorkout.get(w.id) ?? [])

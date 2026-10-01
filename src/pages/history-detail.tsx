@@ -7,7 +7,7 @@ import type { LoggedSetDoc } from "@/data/types";
 import { useLocale } from "@/i18n/client";
 import { makeT } from "@/i18n/dictionaries";
 import { findDay } from "@/lib/client-data";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 import { formatWeight } from "@/lib/units";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +60,7 @@ export default function WorkoutDetailPage() {
         <div className="flex items-center gap-2">
           <h1 className="text-[2rem] leading-tight font-bold">{formatDate(w.performed_at, locale)}</h1>
           {w.status === "skipped" && <Badge variant="secondary">{t("history.skipped")}</Badge>}
+          {formatDuration(w.duration_sec, t) && <Badge variant="outline">{formatDuration(w.duration_sec, t)}</Badge>}
         </div>
         {w.day && (
           <p className="text-muted-foreground">

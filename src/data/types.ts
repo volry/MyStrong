@@ -65,6 +65,9 @@ export type ProgramDayDoc = {
   week_no: number;
   day_no: number;
   title: string | null;
+  /** Plain lines read before the first exercise and after the last; never logged. */
+  warmup: string | null;
+  cooldown: string | null;
   items: ProgramItem[];
 };
 
@@ -110,7 +113,10 @@ export type WorkoutDoc = {
   program_day_id: string;
   /** Snapshot of the day, for history after the program changes. */
   day: { week_no: number; day_no: number; title: string | null } | null;
+  /** When the session started (or was saved, without "Start the workout"). */
   performed_at: string;
+  /** From the "Start the workout" tap to the save; null when the clock was never started. */
+  duration_sec: number | null;
   status: WorkoutStatus;
   client_comment: string | null;
   sets: LoggedSetDoc[];

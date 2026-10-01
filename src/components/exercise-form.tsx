@@ -12,9 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 export function ExerciseForm({ locale, exercise }: { locale: Locale; exercise?: Exercise }) {
   const t = makeT(locale);
-  const { me } = useData();
+  const { me, exercises } = useData();
   const [state, formAction, pending] = useActionState<ExerciseFormState, FormData>(
-    (_prev, formData) => saveExercise(me, exercise ?? null, formData),
+    (_prev, formData) => saveExercise(me, exercise ?? null, formData, exercises.values()),
     null,
   );
   const [url, setUrl] = useState(exercise?.youtube_url ?? "");

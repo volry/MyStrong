@@ -187,6 +187,13 @@ describe("workouts", () => {
     await assertSucceeds(deleteDoc(doc(db(ANNA), "workouts", "w1")));
   });
 
+  test("a workout may carry a sane duration", async () => {
+    await assertSucceeds(setDoc(doc(db(ANNA), "workouts", "d1"), workout({ duration_sec: 3334 })));
+    await assertSucceeds(setDoc(doc(db(ANNA), "workouts", "d2"), workout({ duration_sec: null })));
+    await assertFails(setDoc(doc(db(ANNA), "workouts", "d3"), workout({ duration_sec: 99999 })));
+    await assertFails(setDoc(doc(db(ANNA), "workouts", "d4"), workout({ duration_sec: "long" })));
+  });
+
   test("the coach logs for a client and marks comments seen", async () => {
     await assertSucceeds(setDoc(doc(db(COACH), "workouts", "w4"), workout({ created_by: COACH.uid })));
     await assertSucceeds(updateDoc(doc(db(COACH), "workouts", "wBob"), { coach_seen_at: NOW }));

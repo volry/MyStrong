@@ -1,9 +1,9 @@
 import { deleteDoc, doc, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { go } from "@/lib/nav";
-import { int, num, nullable, str } from "@/lib/form";
+import { int, num, nullable, str, text } from "@/lib/form";
 import type { Profile } from "@/lib/profile";
-import type { Program, ProgramDayDoc, ProgramDoc, ProgramItem } from "../types";
+import type { Program, ProgramDayDoc, ProgramDoc, ProgramItem, Workout } from "../types";
 import { fire, newId, now, read } from "../write";
 import { track } from "@/lib/analytics";
 
@@ -33,7 +33,7 @@ function newProgram(
     reviewed_at: null,
     reviewed_by: null,
     created_at: now(),
-    days: [{ id: uid(), week_no: 1, day_no: 1, title: null, items: [] }],
+    days: [{ id: uid(), week_no: 1, day_no: 1, title: null, warmup: null, cooldown: null, items: [] }],
     ...fields,
   };
 }
@@ -200,7 +200,7 @@ export function withdrawMyProgram(id: string) {
 export async function addWeek(profile: Profile, base: Base, programId: string) {
   await edit(profile, programId, (p) => {
     const week = p.days.reduce((m, d) => Math.max(m, d.week_no), 0) + 1;
-    return { days: [...p.days, { id: uid(), week_no: week, day_no: 1, title: null, items: [] }] };
+    return { days: [...p.days, { id: uid(), week_no: week, day_no: 1, title: null, warmup: null, cooldown: null, items: [] }] };
   });
   go(programPath(base, programId), { replace: true });
 }
@@ -209,7 +209,7 @@ export async function addDay(profile: Profile, base: Base, programId: string, we
   const dayId = uid();
   const done = await edit(profile, programId, (p) => {
     const day = p.days.filter((d) => d.week_no === weekNo).reduce((m, d) => Math.max(m, d.day_no), 0) + 1;
-    return { days: [...p.days, { id: dayId, week_no: weekNo, day_no: day, title: null, items: [] }] };
+    return { days: [...p.days, { id: dayId, week_no: weekNo, day_no: day, title: null, warmup: null, cooldown: null, items: [] }] };
   });
   if (done) go(dayPath(base, programId, dayId));
 }
@@ -232,7 +232,11 @@ export async function deleteWeek(profile: Profile, base: Base, programId: string
 
 export async function updateDay(profile: Profile, base: Base, programId: string, dayId: string, formData: FormData) {
   const title = nullable(str(formData, "title"));
-  const done = await edit(profile, programId, (p) => ({ days: mapDay(p.days, dayId, (d) => ({ ...d, title })) }));
+  const warmup = text(formData, "warmup");
+  const cooldown = text(formData, "cooldown");
+  const done = await edit(profile, programId, (p) => ({
+    days: mapDay(p.days, dayId, (d) => ({ ...d, title, warmup, cooldown })),
+  }));
   if (done) go(`${dayPath(base, programId, dayId)}?saved=1`, { replace: true });
 }
 
@@ -286,7 +290,27 @@ export async function updateProgramExercise(
   go(`${dayPath(base, programId, dayId)}?saved=${id}`, { replace: true });
 }
 
-export async function removeProgramExercise(profile: Profile, base: Base, programId: string, dayId: string, id: string) {
+/** Whether any logged set points at this item of a program day. */
+export function itemHasLogs(workouts: Workout[], itemId: string): boolean {
+  return workouts.some((w) => w.sets.some((s) => s.program_exercise_id === itemId));
+}
+
+/**
+ * Logged sets name the day's item they belong to; removing a trained item would
+ * orphan that history, so a day already trained keeps its exercises.
+ */
+export async function removeProgramExercise(
+  profile: Profile,
+  base: Base,
+  programId: string,
+  dayId: string,
+  id: string,
+  workouts: Workout[],
+) {
+  if (itemHasLogs(workouts, id)) {
+    go(`${dayPath(base, programId, dayId)}?error=logged`, { replace: true });
+    return;
+  }
   await edit(profile, programId, (p) => ({
     days: mapDay(p.days, dayId, (d) => ({ ...d, items: d.items.filter((i) => i.id !== id) })),
   }));
