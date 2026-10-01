@@ -150,8 +150,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       console.warn("[data]", (e as { code?: string }).code ?? e);
       if (retry === undefined) retry = setTimeout(() => setDataAttempt((n) => n + 1), 2000);
     };
-    const own = <T,>(name: string) =>
-      coach ? collection(db, name) : query(collection(db, name), where("client_id", "==", uid)) as Query<T>;
+    // A coach sees their own clients (and their own training); a client sees themself.
+    const own = (name: string) =>
+      query(collection(db, name), coach ? where("coach_id", "==", uid) : where("client_id", "==", uid));
     const stops = [
       listen(collection(db, "exercises"), withId<Exercise>, setExercises, fail),
       listen(own("programs"), withId<Program>, setPrograms, fail),
@@ -159,8 +160,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       listen(query(collection(db, "exportTokens"), where("user_id", "==", uid)), (id) => id, setTokens, fail),
     ];
     if (coach) {
-      stops.push(listen(collection(db, "users"), withId<User>, setUsers, fail));
-      stops.push(listen(collection(db, "invites"), (_id, d) => d as Invite, setInvites, fail));
+      stops.push(listen(own("users"), withId<User>, setUsers, fail));
+      stops.push(
+        listen(query(collection(db, "invites"), where("invited_by", "==", uid)), (_id, d) => d as Invite, setInvites, fail),
+      );
     }
     return () => {
       stops.forEach((stop) => stop());

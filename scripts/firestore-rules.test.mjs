@@ -9,6 +9,8 @@ const NOW = "2026-09-25T10:00:00.000Z";
 let env;
 
 const COACH = { uid: "coach", email: "coach@example.com" };
+const COACH2 = { uid: "coach2", email: "coach2@example.com" };
+const CAROL = { uid: "carol", email: "carol@example.com" }; // COACH2's client
 const ANNA = { uid: "anna", email: "anna@example.com" };
 const BOB = { uid: "bob", email: "bob@example.com" };
 const STRANGER = { uid: "stranger", email: "stranger@example.com" };
@@ -18,12 +20,12 @@ const db = (who) => env.authenticatedContext(who.uid, { email: who.email }).fire
 const anon = () => env.unauthenticatedContext().firestore();
 
 function profile(role, email, extra = {}) {
-  return { email, full_name: null, role, unit: "kg", locale: "uk", rest_timer_sec: 0, focus: {}, created_at: NOW, ...extra };
+  return { email, full_name: null, role, coach_id: COACH.uid, unit: "kg", locale: "uk", rest_timer_sec: 0, focus: {}, created_at: NOW, ...extra };
 }
 
 function program(extra = {}) {
   return {
-    client_id: ANNA.uid, created_by: COACH.uid, name: "Plan", notes: null, start_date: null,
+    client_id: ANNA.uid, coach_id: COACH.uid, created_by: COACH.uid, name: "Plan", notes: null, start_date: null,
     is_active: false, activated_by: null, review_status: "approved", coach_feedback: null,
     submitted_at: null, reviewed_at: null, reviewed_by: null, created_at: NOW, days: [], ...extra,
   };
@@ -31,7 +33,7 @@ function program(extra = {}) {
 
 function workout(extra = {}) {
   return {
-    client_id: ANNA.uid, created_by: ANNA.uid, program_id: "p1", program_day_id: "d1", day: null,
+    client_id: ANNA.uid, coach_id: COACH.uid, created_by: ANNA.uid, program_id: "p1", program_day_id: "d1", day: null,
     performed_at: NOW, status: "done", client_comment: null, sets: [], notes: [], coach_seen_at: null,
     created_at: NOW, ...extra,
   };
@@ -50,9 +52,15 @@ beforeEach(async () => {
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async (ctx) => {
     const admin = ctx.firestore();
-    await setDoc(doc(admin, "users", COACH.uid), profile("coach", COACH.email));
+    await setDoc(doc(admin, "users", COACH.uid), profile("coach", COACH.email, { coach_id: COACH.uid }));
     await setDoc(doc(admin, "users", ANNA.uid), profile("client", ANNA.email));
     await setDoc(doc(admin, "users", BOB.uid), profile("client", BOB.email));
+    await setDoc(doc(admin, "users", COACH2.uid), profile("coach", COACH2.email, { coach_id: COACH2.uid }));
+    await setDoc(doc(admin, "users", CAROL.uid), profile("client", CAROL.email, { coach_id: COACH2.uid }));
+    await setDoc(doc(admin, "workouts", "wCarol"), workout({ client_id: CAROL.uid, created_by: CAROL.uid, coach_id: COACH2.uid }));
+    await setDoc(doc(admin, "invites", "carol2@example.com"), {
+      email: "carol2@example.com", role: "client", full_name: null, invited_by: COACH2.uid, created_at: NOW, accepted_at: null,
+    });
     await setDoc(doc(admin, "invites", "invited@example.com"), {
       email: "invited@example.com", role: "client", full_name: null, invited_by: COACH.uid, created_at: NOW, accepted_at: null,
     });
@@ -91,6 +99,11 @@ describe("sign-up by invite", () => {
     await assertSucceeds(updateDoc(doc(db(INVITED), "invites", "invited@example.com"), { accepted_at: NOW }));
   });
 
+  test("an invited client belongs to the coach who invited them", async () => {
+    await assertFails(setDoc(doc(db(INVITED), "users", INVITED.uid), profile("client", "invited@example.com", { coach_id: COACH2.uid })));
+    await assertSucceeds(setDoc(doc(db(INVITED), "users", INVITED.uid), profile("client", "invited@example.com")));
+  });
+
   test("the invited email cannot promote itself to coach", async () => {
     await assertFails(setDoc(doc(db(INVITED), "users", INVITED.uid), profile("coach", "invited@example.com")));
   });
@@ -115,8 +128,13 @@ describe("profiles", () => {
     await assertFails(updateDoc(doc(db(ANNA), "users", BOB.uid), { full_name: "x" }));
   });
 
-  test("the coach lists everyone and renames clients", async () => {
-    await assertSucceeds(getDocs(collection(db(COACH), "users")));
+  test("a client cannot move to another coach", async () => {
+    await assertFails(updateDoc(doc(db(ANNA), "users", ANNA.uid), { coach_id: COACH2.uid }));
+  });
+
+  test("the coach lists their own people and renames their clients", async () => {
+    await assertSucceeds(getDocs(query(collection(db(COACH), "users"), where("coach_id", "==", COACH.uid))));
+    await assertFails(getDocs(collection(db(COACH), "users")));
     await assertSucceeds(updateDoc(doc(db(COACH), "users", ANNA.uid), { full_name: "Anna" }));
     await assertFails(updateDoc(doc(db(COACH), "users", ANNA.uid), { role: "coach" }));
   });
@@ -176,6 +194,40 @@ describe("workouts", () => {
 
   test("a stranger cannot forge a workout", async () => {
     await assertFails(setDoc(doc(db(STRANGER), "workouts", "w5"), workout({ client_id: STRANGER.uid, created_by: STRANGER.uid })));
+  });
+});
+
+describe("coaches see only their own clients", () => {
+  test("another coach's client is invisible", async () => {
+    await assertFails(getDoc(doc(db(COACH), "users", CAROL.uid)));
+    await assertFails(getDoc(doc(db(COACH), "workouts", "wCarol")));
+    await assertFails(getDoc(doc(db(COACH2), "workouts", "w1")));
+    await assertFails(getDoc(doc(db(COACH2), "programs", "coachPlan")));
+    await assertSucceeds(getDoc(doc(db(COACH2), "workouts", "wCarol")));
+  });
+
+  test("a coach queries only by their own coach_id", async () => {
+    await assertSucceeds(getDocs(query(collection(db(COACH2), "workouts"), where("coach_id", "==", COACH2.uid))));
+    await assertFails(getDocs(query(collection(db(COACH2), "workouts"), where("coach_id", "==", COACH.uid))));
+    await assertFails(getDocs(collection(db(COACH2), "workouts")));
+  });
+
+  test("a coach cannot write for someone else's client", async () => {
+    await assertFails(setDoc(doc(db(COACH2), "workouts", "x1"), workout({ created_by: COACH2.uid, coach_id: COACH2.uid })));
+    await assertFails(setDoc(doc(db(COACH2), "programs", "x2"), program({ created_by: COACH2.uid, coach_id: COACH2.uid })));
+    await assertFails(updateDoc(doc(db(COACH2), "users", ANNA.uid), { full_name: "x" }));
+    await assertSucceeds(setDoc(doc(db(COACH2), "workouts", "x3"), workout({ client_id: CAROL.uid, created_by: COACH2.uid, coach_id: COACH2.uid })));
+  });
+
+  test("a client cannot file a workout under another coach", async () => {
+    await assertFails(setDoc(doc(db(ANNA), "workouts", "x4"), workout({ coach_id: COACH2.uid })));
+    await assertFails(updateDoc(doc(db(ANNA), "workouts", "w1"), { coach_id: COACH2.uid }));
+  });
+
+  test("invites are per coach", async () => {
+    await assertFails(getDoc(doc(db(COACH), "invites", "carol2@example.com")));
+    await assertFails(deleteDoc(doc(db(COACH), "invites", "carol2@example.com")));
+    await assertSucceeds(getDocs(query(collection(db(COACH2), "invites"), where("invited_by", "==", COACH2.uid))));
   });
 });
 

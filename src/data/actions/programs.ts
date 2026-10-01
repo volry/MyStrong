@@ -18,7 +18,9 @@ const programPath = (base: Base, id: string) => `${base}/${id}`;
 const dayPath = (base: Base, programId: string, dayId: string) => `${base}/${programId}/days/${dayId}`;
 const uid = () => crypto.randomUUID();
 
-function newProgram(fields: Partial<ProgramDoc> & Pick<ProgramDoc, "client_id" | "created_by" | "name">): ProgramDoc {
+function newProgram(
+  fields: Partial<ProgramDoc> & Pick<ProgramDoc, "client_id" | "coach_id" | "created_by" | "name">,
+): ProgramDoc {
   return {
     notes: null,
     start_date: null,
@@ -74,7 +76,13 @@ export function createProgram(profile: Profile, formData: FormData) {
   fire(
     setDoc(
       doc(db, "programs", id),
-      newProgram({ client_id, created_by: profile.id, name, start_date: nullable(str(formData, "start_date")) }),
+      newProgram({
+        client_id,
+        coach_id: profile.id,
+        created_by: profile.id,
+        name,
+        start_date: nullable(str(formData, "start_date")),
+      }),
     ),
   );
   go(`/programs/${id}`);
@@ -90,6 +98,7 @@ export function createMyProgram(profile: Profile, formData: FormData) {
       doc(db, "programs", id),
       newProgram({
         client_id: profile.id,
+        coach_id: profile.coach_id ?? "",
         created_by: profile.id,
         name,
         start_date: nullable(str(formData, "start_date")),
@@ -144,6 +153,7 @@ export function copyProgram(profile: Profile, source: Program, formData: FormDat
       doc(db, "programs", id),
       newProgram({
         client_id,
+        coach_id: profile.id,
         created_by: profile.id,
         name: str(formData, "name") || source.name,
         notes: source.notes,

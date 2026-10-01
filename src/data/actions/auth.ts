@@ -56,6 +56,8 @@ async function createProfile(user: AuthUser, locale: Locale): Promise<boolean> {
     email,
     full_name: invite.full_name,
     role: invite.role,
+    // A client belongs to the coach who invited them; a coach to themself.
+    coach_id: invite.role === "coach" ? user.uid : invite.invited_by,
     unit: "kg",
     locale,
     rest_timer_sec: 0,

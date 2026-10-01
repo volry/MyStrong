@@ -62,6 +62,11 @@ function cleanComment(comment: string | undefined): string | null {
   return c ? c.slice(0, 2000) : null;
 }
 
+/** The coach a person's records are filed under: the coach's own id when a coach writes. */
+function coachIdFor(profile: Profile): string {
+  return profile.role === "coach" ? profile.id : (profile.coach_id ?? "");
+}
+
 /** Who the workout belongs to: the actor, or a client when the coach logs for them. */
 function resolveOwner(profile: Profile, clientId: string | undefined): string {
   return clientId && profile.role === "coach" && clientId !== profile.id ? clientId : profile.id;
@@ -91,6 +96,7 @@ export function finishWorkout(
   const stamp = now();
   const workout: WorkoutDoc = {
     client_id: ownerId,
+    coach_id: coachIdFor(profile),
     created_by: profile.id,
     program_id: found?.program.id ?? null,
     program_day_id: input.dayId,
@@ -149,6 +155,7 @@ export function skipDay(profile: Profile, programs: Program[], dayId: string, cl
   const stamp = now();
   const workout: WorkoutDoc = {
     client_id: ownerId,
+    coach_id: coachIdFor(profile),
     created_by: profile.id,
     program_id: found?.program.id ?? null,
     program_day_id: dayId,

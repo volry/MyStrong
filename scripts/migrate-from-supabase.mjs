@@ -1,6 +1,6 @@
 // One-time copy of the Supabase data into Firestore, keeping every id.
 //
-//   node scripts/migrate-from-supabase.mjs <dump.json> [--project mystrong-vvr-2026] [--emulator] [--dry-run]
+//   node scripts/migrate-from-supabase.mjs <dump.json> [--coach <email>] [--project mystrong-vvr-2026] [--emulator] [--dry-run]
 //
 // <dump.json> is the single JSON value returned by DUMP_SQL below (run it in the
 // Supabase SQL editor or through the MCP connector and save the result). The
@@ -39,10 +39,18 @@ const groupBy = (rows, key) => {
   return map;
 };
 
-/** Pure transform: Supabase rows -> Firestore documents by path. */
-export function transform(dump) {
+/**
+ * Pure transform: Supabase rows -> Firestore documents by path. Supabase had no
+ * coach per client, so every client goes to one coach: `coachEmail`, or the
+ * first coach ever created. A coach's own training stays theirs.
+ */
+export function transform(dump, coachEmail) {
   const docs = new Map();
   const put = (path, data) => docs.set(path, data);
+  const coaches = dump.profiles.filter((p) => p.role === "coach").sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const coach = coaches.find((p) => p.email.toLowerCase() === coachEmail?.toLowerCase()) ?? coaches[0];
+  const roleOf = new Map(dump.profiles.map((p) => [p.id, p.role]));
+  const coachOf = (uid) => (roleOf.get(uid) === "coach" ? uid : (coach?.id ?? null));
 
   const focusByUser = groupBy(dump.exercise_focus, "user_id");
   for (const p of dump.profiles) {
@@ -50,6 +58,7 @@ export function transform(dump) {
       email: p.email.toLowerCase(),
       full_name: p.full_name,
       role: p.role,
+      coach_id: coachOf(p.id),
       unit: p.unit,
       locale: p.locale === "uk" ? "uk" : "en",
       rest_timer_sec: p.rest_timer_sec ?? 0,
@@ -108,6 +117,7 @@ export function transform(dump) {
       }));
     put(`programs/${p.id}`, {
       client_id: p.client_id,
+      coach_id: coachOf(p.client_id),
       created_by: p.created_by,
       name: p.name,
       notes: p.notes,
@@ -131,6 +141,7 @@ export function transform(dump) {
     const day = dayById.get(w.program_day_id);
     put(`workouts/${w.id}`, {
       client_id: w.client_id,
+      coach_id: coachOf(w.client_id),
       // Supabase did not record who logged it; the client is the safe owner.
       created_by: w.client_id,
       program_id: day?.program_id ?? null,
@@ -175,7 +186,8 @@ async function main() {
   let dump = JSON.parse(readFileSync(file, "utf8"));
   if (Array.isArray(dump)) dump = dump[0];
   if (dump.dump) dump = typeof dump.dump === "string" ? JSON.parse(dump.dump) : dump.dump;
-  const docs = transform(dump);
+  const coachArg = args.includes("--coach") ? args[args.indexOf("--coach") + 1] : undefined;
+  const docs = transform(dump, coachArg);
 
   const counts = {};
   for (const path of docs.keys()) counts[path.split("/")[0]] = (counts[path.split("/")[0]] ?? 0) + 1;

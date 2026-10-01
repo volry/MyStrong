@@ -52,9 +52,9 @@ async function sendPush(userIds, build) {
   );
 }
 
-async function coachIdsExcept(uid) {
-  const coaches = await db.collection("users").where("role", "==", "coach").get();
-  return coaches.docs.map((d) => d.id).filter((id) => id !== uid);
+/** The client's own coach, never the client themself (a coach's own training). */
+function coachOf(doc) {
+  return doc.coach_id && doc.coach_id !== doc.client_id ? [doc.coach_id] : [];
 }
 
 async function nameOf(uid) {
@@ -73,7 +73,7 @@ export const workoutCreated = onDocumentCreated(
 
     const name = author.get("full_name") || author.get("email") || "";
     const comment = (w.client_comment ?? "").trim();
-    await sendPush(await coachIdsExcept(w.client_id), (t) => ({
+    await sendPush(coachOf(w), (t) => ({
       title: t.workoutDone(name),
       body:
         (w.day ? [t.week(w.day.week_no), t.day(w.day.day_no), w.day.title].filter(Boolean).join(" · ") : "") +
@@ -104,7 +104,7 @@ export const programUpdated = onDocumentUpdated(
     // A client sent their program for review.
     if (before.review_status !== "pending" && after.review_status === "pending") {
       const name = await nameOf(after.client_id);
-      await sendPush(await coachIdsExcept(after.client_id), (t) => ({
+      await sendPush(coachOf(after), (t) => ({
         title: t.programSubmitted(name),
         body: t.programSubmittedBody(after.name),
         url: `/programs/${id}`,
@@ -144,14 +144,13 @@ export const exportSets = onRequest({ cors: false, memory: "256MiB" }, async (re
   const who = await db.doc(`users/${userId}`).get();
   const coach = who.get("role") === "coach";
 
-  const workoutsQuery = coach
-    ? db.collection("workouts").where("status", "==", "done")
-    : db.collection("workouts").where("client_id", "==", userId).where("status", "==", "done");
+  // A coach exports their own clients (and their own training); a client, themself.
+  const scope = coach ? ["coach_id", userId] : ["client_id", userId];
   const [workouts, programs, exercises, users] = await Promise.all([
-    workoutsQuery.get(),
-    coach ? db.collection("programs").get() : db.collection("programs").where("client_id", "==", userId).get(),
+    db.collection("workouts").where(scope[0], "==", scope[1]).get(),
+    db.collection("programs").where(scope[0], "==", scope[1]).get(),
     db.collection("exercises").get(),
-    coach ? db.collection("users").get() : Promise.resolve({ docs: [who] }),
+    coach ? db.collection("users").where("coach_id", "==", userId).get() : Promise.resolve({ docs: [who] }),
   ]);
 
   const body = buildCsv({

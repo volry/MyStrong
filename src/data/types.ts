@@ -16,6 +16,8 @@ export type UserDoc = {
   email: string;
   full_name: string | null;
   role: Role;
+  /** A client's coach; a coach's own id (their own training is theirs alone). */
+  coach_id: string | null;
   unit: Unit;
   locale: "uk" | "en";
   /** Rest countdown after a set, seconds. 0 = off. */
@@ -69,6 +71,8 @@ export type ProgramDayDoc = {
 /** programs/{id} — days and their exercises live inside the document. */
 export type ProgramDoc = {
   client_id: string;
+  /** The client's coach, copied here so a coach can ask for exactly their programs. */
+  coach_id: string;
   created_by: string | null;
   name: string;
   notes: string | null;
@@ -99,6 +103,8 @@ export type LoggedSetDoc = {
 /** workouts/{id} — sets and notes live inside the document. */
 export type WorkoutDoc = {
   client_id: string;
+  /** The client's coach, as on programs. */
+  coach_id: string;
   created_by: string;
   program_id: string | null;
   program_day_id: string;
